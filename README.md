@@ -1,13 +1,6 @@
-JettyRestTemplate
+RfTransmitter
 =================
 
-A minimal template project to get you started developing RESTful services in java. It is based on:
+Receives and handles inbound RF messages and provides an API to send RF packets.
 
-* java 8
-* gradle
-* jetty 9
-* PicoContainer
-* org.json
-* com.google.code.gson
-
-There is no spring or web.xml.
+This software provides an API for my 433Mhz RF transceiver which I built here: http://www.dehnes.com/141/2010/10/10/general-purpose-rf-receiver/ 
