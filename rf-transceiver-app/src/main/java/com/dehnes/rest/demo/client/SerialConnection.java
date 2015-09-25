@@ -43,14 +43,10 @@ public class SerialConnection {
     private final LinkedList<SendRequest> sendingQueue = new LinkedList<>();
 
     public SerialConnection(ExecutorService threadPool) {
-        this(threadPool, new InetSocketAddress(
-                System.getProperty("DST_HOST", "localhost"),
-                Integer.parseInt(System.getProperty("DST_PORT", "23000"))));
-    }
-
-    public SerialConnection(ExecutorService threadPool, SocketAddress dst) {
         this.threadPool = threadPool;
-        this.dst = dst;
+        this.dst = new InetSocketAddress(
+                System.getProperty("DST_HOST", "localhost"),
+                Integer.parseInt(System.getProperty("DST_PORT", "23000")));
     }
 
     public class RfPacket {
@@ -60,6 +56,14 @@ public class SerialConnection {
         public RfPacket(int remoteAddr, int[] message) {
             this.remoteAddr = remoteAddr;
             this.message = message;
+        }
+
+        public int getRemoteAddr() {
+            return remoteAddr;
+        }
+
+        public int[] getMessage() {
+            return message;
         }
 
         @Override
@@ -293,7 +297,7 @@ public class SerialConnection {
 
             if (writePos == buf.length) {
                 // forced to give up
-                logger.info("Bugger is full, giving up");
+                logger.info("Buffer is full, giving up");
                 return null;
             }
         }
