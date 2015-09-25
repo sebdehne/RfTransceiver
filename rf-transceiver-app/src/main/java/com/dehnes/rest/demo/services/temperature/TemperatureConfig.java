@@ -1,9 +1,12 @@
 package com.dehnes.rest.demo.services.temperature;
 
+import com.dehnes.rest.demo.utils.ADCTools;
+
 import java.util.Optional;
 
 public class TemperatureConfig {
 
+    // http://www.mouser.com/ds/2/136/LeadedDisks__B57164__K164-81893.pdf
     private static final int[][] map_10k = new int[][]{
             {-55, 1214600},
             {-50, 844390},
@@ -28,6 +31,7 @@ public class TemperatureConfig {
             {45, 4102}
     };
 
+    // http://www.mouser.com/ds/2/136/LeadedDisks__B57164__K164-81893.pdf
     private static final int[][] map_4k7 = new int[][]{
             {-55, 880520},
             {-50, 616500},
@@ -58,7 +62,6 @@ public class TemperatureConfig {
 
         private final int voltageDividerResistance;
         private final int[][] correctionMap;
-        private final int max_adc = 1024;
 
         ThermistorConfig(int voltageDividerResistance, int[][] correctionMap) {
             this.voltageDividerResistance = voltageDividerResistance;
@@ -66,7 +69,7 @@ public class TemperatureConfig {
         }
 
         public Optional<Integer> tempValueToResistence(int tempValue) {
-            int resistance = ((max_adc * voltageDividerResistance) / tempValue) - voltageDividerResistance;
+            int resistance = ADCTools.resistance(voltageDividerResistance, tempValue);
 
             int lastTemp = correctionMap[0][0];
             int lastOhm = correctionMap[0][1];

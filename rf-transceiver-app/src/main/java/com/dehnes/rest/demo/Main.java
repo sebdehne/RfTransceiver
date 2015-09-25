@@ -1,11 +1,10 @@
 package com.dehnes.rest.demo;
 
-import com.dehnes.rest.demo.services.temperature.TemperatureHandleService;
-import org.eclipse.jetty.server.Server;
-
+import com.dehnes.rest.demo.services.SensorReceiverService;
 import com.dehnes.rest.demo.services.ShutdownService;
 import com.dehnes.rest.server.EmbeddedJetty;
 import com.dehnes.rest.server.config.AppContext;
+import org.eclipse.jetty.server.Server;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -24,7 +23,7 @@ public class Main {
 
         config.addInstance(ExecutorService.class, Executors.newCachedThreadPool());
         config.getInstance(ShutdownService.class).setServer(server);
-        config.getInstance(TemperatureHandleService.class);
+        config.getInstance(SensorReceiverService.class);
         config.start();
         server.join();
     }
