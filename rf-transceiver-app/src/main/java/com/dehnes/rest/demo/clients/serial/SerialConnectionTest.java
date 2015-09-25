@@ -1,4 +1,4 @@
-package com.dehnes.rest.demo.client;
+package com.dehnes.rest.demo.clients.serial;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

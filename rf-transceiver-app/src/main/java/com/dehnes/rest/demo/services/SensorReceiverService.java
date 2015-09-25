@@ -1,8 +1,10 @@
 package com.dehnes.rest.demo.services;
 
-import com.dehnes.rest.demo.client.SerialConnection;
+import com.dehnes.rest.demo.clients.influxdb.InfluxDBConnector;
+import com.dehnes.rest.demo.clients.serial.SerialConnection;
 import com.dehnes.rest.demo.services.humidity.HumidityService;
 import com.dehnes.rest.demo.services.temperature.TemperatureHandleService;
+import com.dehnes.rest.demo.utils.ByteTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,12 +22,14 @@ public class SensorReceiverService {
     private final Consumer<SerialConnection.RfPacket> listener;
     private final TemperatureHandleService temperatureHandleService;
     private final HumidityService humidityService;
+    private final InfluxDBConnector influxDBConnector;
 
-    public SensorReceiverService(SerialConnection serialConnection, SensorRepo sensorRepo, TemperatureHandleService temperatureHandleService, HumidityService humidityService) {
+    public SensorReceiverService(SerialConnection serialConnection, SensorRepo sensorRepo, TemperatureHandleService temperatureHandleService, HumidityService humidityService, InfluxDBConnector influxDBConnector) {
         this.serialConnection = serialConnection;
         this.sensorRepo = sensorRepo;
         this.temperatureHandleService = temperatureHandleService;
         this.humidityService = humidityService;
+        this.influxDBConnector = influxDBConnector;
         listener = this::handleIncoming;
     }
 
@@ -48,15 +52,20 @@ public class SensorReceiverService {
             return;
         }
 
+        Optional<Integer> temp = Optional.empty();
+        Optional<Integer> humidity = Optional.empty();
+        Optional<Integer> counter = Optional.empty();
+        Optional<Integer> light = Optional.empty();
+
         if (sensorDef.getVersion().getTemperaturePos().isPresent()) {
-            Optional<Integer> temp = temperatureHandleService.extractTemperature(sensorDef.getVersion().getTemperaturePos().get(), packet, sensorDef);
+            temp = temperatureHandleService.extractTemperature(sensorDef.getVersion().getTemperaturePos().get(), packet, sensorDef);
             if (temp.isPresent()) {
                 logger.info(sensorDef.getName() + " - temperature: " + temp.get());
 
                 if (sensorDef.getVersion().getHumidityPos().isPresent()) {
-                    Optional<Integer> humdity = humidityService.extractHumdity(sensorDef.getVersion().getHumidityPos().get(), packet, temp.get());
-                    if (humdity.isPresent()) {
-                        logger.info(sensorDef.getName() + " - relative humidity: " + humdity.get());
+                    humidity = humidityService.extractHumdity(sensorDef.getVersion().getHumidityPos().get(), packet, temp.get());
+                    if (humidity.isPresent()) {
+                        logger.info(sensorDef.getName() + " - relative humidity: " + humidity.get());
                     } else {
                         logger.warn("Failed to calc humidity");
                     }
@@ -65,8 +74,17 @@ public class SensorReceiverService {
                 logger.warn("Failed to calc temp");
             }
         }
+        if (sensorDef.getVersion().getCounterPos().isPresent()) {
+            counter = Optional.of(packet.getMessage()[sensorDef.getVersion().getCounterPos().get()]);
+        }
+        if (sensorDef.getVersion().getLightPos().isPresent()) {
+            int lightLow = packet.getMessage()[sensorDef.getVersion().getLightPos().get()];
+            int lightHi = packet.getMessage()[sensorDef.getVersion().getLightPos().get() + 1];
+            light = Optional.of(ByteTools.merge(lightLow, lightHi));
+        }
 
-
+        // record received data in db
+        influxDBConnector.recordSensorData(sensorDef, temp, humidity, counter, light);
     }
 
 }

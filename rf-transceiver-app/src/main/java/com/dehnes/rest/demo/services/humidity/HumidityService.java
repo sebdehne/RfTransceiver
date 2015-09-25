@@ -1,6 +1,6 @@
 package com.dehnes.rest.demo.services.humidity;
 
-import com.dehnes.rest.demo.client.SerialConnection;
+import com.dehnes.rest.demo.clients.serial.SerialConnection;
 import com.dehnes.rest.demo.utils.ADCTools;
 import com.dehnes.rest.demo.utils.ByteTools;
 

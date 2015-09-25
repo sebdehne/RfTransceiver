@@ -1,4 +1,4 @@
-package com.dehnes.rest.demo.client;
+package com.dehnes.rest.demo.clients.serial;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -205,10 +206,11 @@ public class SerialConnection {
                 }
 
                 byte[] buf = new byte[1024];
+                AtomicInteger writePos = new AtomicInteger(0);
 
                 RfPacket nextPacket;
                 while (isStarted.get()) { // keep reading packets while connected
-                    nextPacket = tryReadNextPacket(in, buf);
+                    nextPacket = tryReadNextPacket(in, buf, writePos);
                     if (nextPacket == null) {
                         break; // Some I/O error - give up
                     }
@@ -249,53 +251,54 @@ public class SerialConnection {
         return false;
     }
 
-    private RfPacket tryReadNextPacket(InputStream in, byte[] buf) {
+    private RfPacket tryReadNextPacket(InputStream in, byte[] buf, AtomicInteger writePos) {
         // packet format: <errorCode>,<dst>,<from>,<msgLen>,msg...
-
-        int writePos = 0;
 
         while (true) {
 
             // we need at least 4 bytes
-            if (writePos >= 4) {
+            if (writePos.get() >= 4) {
                 int errorCode = buf[0] & 0xFF;
                 int dst = buf[1] & 0xFF;
                 int from = buf[2] & 0xFF;
-                byte msgLen = buf[3];
+                int msgLen = buf[3];
+
+                byte[] debug = new byte[4];
+                System.arraycopy(buf, 0, debug, 0, 4);
+                logger.debug("Got {}", debug);
 
                 if (errorCode != 0) { // skip error
                     logger.debug("Skipping error " + errorCode);
-                    compact(buf, 1);
-                    writePos = 0;
+                    compact(buf, 1, writePos);
                     continue;
                 }
 
                 // do we have a complete packet?
-                if (writePos >= 4 + msgLen) {
+                if (writePos.get() >= 4 + msgLen) {
                     byte[] msg = new byte[msgLen];
                     System.arraycopy(buf, 4, msg, 0, msgLen);
                     RfPacket p = new RfPacket(
                             from,
                             convert(msg)
                     );
-                    compact(buf, 4 + msgLen);
+                    compact(buf, 4 + msgLen, writePos);
+
                     if (dst == MY_DST) {
                         logger.info("Received packet " + p);
                         return p;
                     } else {
                         logger.debug("Packet not for me " + p);
-                        writePos = 0;
                     }
                 }
             }
 
             try {
-                writePos += in.read(buf, writePos, buf.length - writePos);
+                writePos.set(writePos.get() + in.read(buf, writePos.get(), buf.length - writePos.get()));
             } catch (IOException e) {
                 return null;
             }
 
-            if (writePos == buf.length) {
+            if (writePos.get() == buf.length) {
                 // forced to give up
                 logger.info("Buffer is full, giving up");
                 return null;
@@ -315,8 +318,9 @@ public class SerialConnection {
         }
     }
 
-    private void compact(byte[] buf, int firstByte) {
+    private void compact(byte[] buf, int firstByte, AtomicInteger writePos) {
         System.arraycopy(buf, firstByte, buf, 0, buf.length - firstByte);
+        writePos.set(writePos.get() - firstByte);
     }
 
     @PreDestroy
@@ -341,8 +345,18 @@ public class SerialConnection {
 
     private void distributeNewMessage(RfPacket rfPacket) {
         synchronized (listeners) {
-            listeners.forEach(l -> threadPool.submit(() -> l.accept(rfPacket)));
+            listeners.forEach(l -> threadPool.submit(wrap(() -> l.accept(rfPacket))));
         }
+    }
+
+    private Runnable wrap(Runnable r) {
+        return () -> {
+            try {
+                r.run();
+            } catch (Exception e) {
+                logger.error("", e);
+            }
+        };
     }
 
     private boolean reconnect() {
