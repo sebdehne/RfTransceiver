@@ -21,8 +21,16 @@ public class InfluxDBConnector {
 
 
     public InfluxDBConnector() {
+        createDb();
+    }
+
+    private void createDb() {
+        String createDbQuery = "CREATE DATABASE " + dbName;
+        String retentionPolicy = "alter RETENTION POLICY default ON sensor_data DURATION 260w"; // 5 years
+        //
         try {
-            Request.Get("http://localhost:8086/query?q=" + URLEncoder.encode("CREATE DATABASE " + dbName, "UTF-8")).execute();
+            Request.Get("http://localhost:8086/query?q=" + URLEncoder.encode(createDbQuery, "UTF-8")).execute();
+            Request.Get("http://localhost:8086/query?q=" + URLEncoder.encode(retentionPolicy, "UTF-8")).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
