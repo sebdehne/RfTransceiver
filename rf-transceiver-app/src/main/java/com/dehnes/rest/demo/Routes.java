@@ -30,18 +30,22 @@ public class Routes implements RoutesFactory {
 
         routes = new RouteBuilder()
 
-                .when("^/garage_door")
-                  .get(getGarageDoorEndpoint)
-                  .when("/action")
-                    .post(controlGarageDoorEndpoint)
-                  .done()
-                .done()
+                .when("^/api")
 
-                .when("^/storage_fan")
-                  .get(getStorageFanSpeedEndpoint)
-                  .when("/action")
-                    .post(setStorageFanSpeedEndpoint)
+                  .when("/garage_door")
+                    .get(getGarageDoorEndpoint)
+                    .when("/action")
+                      .post(controlGarageDoorEndpoint)
+                    .done()
                   .done()
+
+                  .when("/storage_fan")
+                    .get(getStorageFanSpeedEndpoint)
+                    .when("/action")
+                      .post(setStorageFanSpeedEndpoint)
+                    .done()
+                  .done()
+
                 .done()
 
                 .when(".*").get(staticFileFetcher).done()

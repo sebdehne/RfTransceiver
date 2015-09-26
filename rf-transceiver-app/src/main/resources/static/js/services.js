@@ -64,17 +64,17 @@ angular.module('project.services', [])
   .factory('GarageService', function ($http, HttpWrapper) {
     return {
       getStatus: function (fn) {
-        HttpWrapper.handleResult($http.get('/garage_door'), 'Could not fetch the garage status', fn);
+        HttpWrapper.handleResult($http.get('/api/garage_door'), 'Could not fetch the garage status', fn);
       },
       sendClose: function (fn) {
         HttpWrapper.handleResult(
-          $http.post('/garage_door/action?command=close'),
+          $http.post('/api/garage_door/action?command=close'),
           'Could not send close command',
           fn);
       },
       sendOpen: function (fn) {
         HttpWrapper.handleResult(
-          $http.post('/garage_door/action?command=open'),
+          $http.post('/api/garage_door/action?command=open'),
           'Could not send open command',
           fn);
       }
@@ -84,11 +84,11 @@ angular.module('project.services', [])
   .factory('VentilationService', function ($http, HttpWrapper) {
     return {
       getStatus: function (fn) {
-        HttpWrapper.handleResult($http.get('/storage_fan'), 'Could not fetch the ventilation status', fn);
+        HttpWrapper.handleResult($http.get('/api/storage_fan'), 'Could not fetch the ventilation status', fn);
       },
       sendLevel: function (level, fn) {
         HttpWrapper.handleResult(
-          $http.post('/storage_fan/action?set_level=' + level),
+          $http.post('/api/storage_fan/action?set_level=' + level),
           'Could not send level',
           fn);
       }
