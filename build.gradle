@@ -6,7 +6,7 @@ allprojects {
     apply plugin: 'idea'
     apply plugin: 'eclipse'
 
-    group = 'com.dehnes.rest.template'
+    group = 'com.dehnes.smarthomeng'
     version = '1.0'
 
     repositories {

@@ -50,7 +50,7 @@ public class SerialConnection {
                 Integer.parseInt(System.getProperty("DST_PORT", "23000")));
     }
 
-    public class RfPacket {
+    public static class RfPacket {
         private final int remoteAddr;
         private final int[] message;
 
@@ -110,10 +110,6 @@ public class SerialConnection {
         outputStreamLock.lock();
         try {
 
-            if (!isStarted.get()) {
-                return false;
-            }
-
             sendingQueue.offer(new SendRequest(
                     rfPacket,
                     q
@@ -126,7 +122,8 @@ public class SerialConnection {
         }
 
         try {
-            return q.poll(timeout, timeUnit);
+            Boolean poll = q.poll(timeout, timeUnit);
+            return poll == null ? false : poll;
         } catch (InterruptedException ignored) {
         }
         return false;
@@ -177,12 +174,22 @@ public class SerialConnection {
                         return; // is shutting down
                     }
 
-                    if (out == null) { // not connected, report error
-                        sendRequest.result.offer(false);
+                    if (out == null) { // not connected yet
+                        sendingQueue.addFirst(sendRequest);
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                        }
                         continue;
                     }
 
                     sendRequest.result.offer(writePacket(sendRequest.packet, out));
+
+                    // do not flood the sender
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ignored) {
+                    }
                 } finally {
                     outputStreamLock.unlock();
                 }

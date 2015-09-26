@@ -1,0 +1,13 @@
+<button class="btn btn-link" ng-click="go('/')">Home</button>
+<h2>Garage</h2>
+
+<ul class="list-unstyled">
+    <li>Door is currently: {{status.door}}</li>
+    <li>Light is currently: {{status.light}}</li>
+</ul>
+
+<ul class="list-inline">
+    <button ng-click="sendOpen()" class="btn btn-default"><span class="mega-octicon octicon-arrow-up"></span></button>
+    <button ng-click="sendClose()" class="btn btn-default"><span class="mega-octicon octicon-arrow-down"></span>
+    </button>
+</ul>

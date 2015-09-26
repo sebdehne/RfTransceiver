@@ -1,0 +1,14 @@
+<button class="btn btn-link" ng-click="go('/')">Home</button>
+<h2>Ventilation</h2>
+
+<ul class="list-unstyled">
+    <li>Last sent level: {{current_level}} %</li>
+</ul>
+
+<ul class="list-inline">
+    <button ng-click="send(0)" class="btn btn-default">Off</button>
+    <button ng-click="send(20)" class="btn btn-default">7.84%</button>
+    <button ng-click="send(64)" class="btn btn-default">25%</button>
+    <button ng-click="send(128)" class="btn btn-default">50%</button>
+    <button ng-click="send(255)" class="btn btn-default">100%</button>
+</ul>

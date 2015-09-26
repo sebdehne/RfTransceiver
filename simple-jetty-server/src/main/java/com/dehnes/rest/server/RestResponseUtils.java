@@ -1,24 +1,23 @@
 package com.dehnes.rest.server;
 
-import java.io.IOException;
-
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.eclipse.jetty.http.MimeTypes;
-import org.eclipse.jetty.server.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import javax.servlet.http.HttpServletResponse;
+
 
 public class RestResponseUtils {
 
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
-    public static void setJsonResponse(Response r, Object body) {
+    public static void jsonResponse(HttpServletResponse r, Object body) {
         setJsonResponse(r, 200, body);
     }
 
-    public static void setJsonResponse(Response r, int statusCode, Object body) {
+    public static void setJsonResponse(HttpServletResponse r, int statusCode, Object body) {
         try {
             r.reset();
             r.setStatus(statusCode);
@@ -31,15 +30,20 @@ public class RestResponseUtils {
             } else {
                 bodyStr = gson.toJson(body);
             }
-            r.getHttpOutput().print(bodyStr);
-            r.getHttpOutput().close();
-        } catch (IOException e) {
+            r.getOutputStream().write(bodyStr.getBytes("UTF-8"));
+            r.getOutputStream().flush();
+            r.getOutputStream().close();
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static void internalServer(Response r, Throwable t) {
-        setJsonResponse(r, 500, t.getMessage());
+    public static void internalServer(HttpServletResponse r, Throwable t) {
+        String message = t.getMessage();
+        if (message == null) {
+            message = t.getClass().getSimpleName();
+        }
+        setJsonResponse(r, 500, message);
     }
 
 }

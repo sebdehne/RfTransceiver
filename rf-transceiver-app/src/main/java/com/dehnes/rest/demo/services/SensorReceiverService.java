@@ -48,7 +48,7 @@ public class SensorReceiverService {
         SensorRepo.SensorDef sensorDef = sensorRepo.getSensorDef(sensorId);
 
         if (sensorDef == null) {
-            logger.warn("Received message from unknown sensor " + packet.getRemoteAddr());
+            logger.debug("Received message from unknown sensor " + packet.getRemoteAddr());
             return;
         }
 

@@ -2,30 +2,67 @@ package com.dehnes.rest.demo;
 
 import java.util.List;
 
-import com.dehnes.rest.demo.endpoints.Echo;
-import com.dehnes.rest.demo.endpoints.PingGet;
-import com.dehnes.rest.demo.endpoints.Shutdown;
-import com.dehnes.rest.server.RouteBuilder;
-import com.dehnes.rest.server.config.Route;
-import com.dehnes.rest.server.config.RoutesFactory;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.dehnes.rest.demo.endpoints.ControlGarageDoorEndpoint;
+import com.dehnes.rest.demo.endpoints.GetGarageDoorEndpoint;
+import com.dehnes.rest.demo.endpoints.GetStorageFanSpeedEndpoint;
+import com.dehnes.rest.demo.endpoints.RedirectionEndpoint;
+import com.dehnes.rest.demo.endpoints.SetStorageFanSpeedEndpoint;
+import com.dehnes.rest.demo.endpoints.StaticFileFetcher;
+import com.dehnes.rest.server.route.Route;
+import com.dehnes.rest.server.route.RouteBuilder;
+import com.dehnes.rest.server.route.RoutesFactory;
+import com.dehnes.rest.server.utils.Tuple;
 
 public class Routes implements RoutesFactory {
 
     private final List<Route> routes;
 
-    public Routes(PingGet pingGet,
-                  Shutdown shutdown,
-                  Echo echo) {
+    public Routes(
+            GetGarageDoorEndpoint getGarageDoorEndpoint,
+            ControlGarageDoorEndpoint controlGarageDoorEndpoint,
+            GetStorageFanSpeedEndpoint getStorageFanSpeedEndpoint,
+            SetStorageFanSpeedEndpoint setStorageFanSpeedEndpoint,
+            RedirectionEndpoint redirectionEndpoint,
+            StaticFileFetcher staticFileFetcher) {
 
         routes = new RouteBuilder()
-                .get("^/ping", pingGet)
-                .post("^/shutdown", shutdown)
-                .post("^/echo", echo)
+
+                .when("^/garage_door")
+                  .get(getGarageDoorEndpoint)
+                  .when("/action")
+                    .post(controlGarageDoorEndpoint)
+                  .done()
+                .done()
+
+                .when("^/storage_fan")
+                  .get(getStorageFanSpeedEndpoint)
+                  .when("/action")
+                    .post(setStorageFanSpeedEndpoint)
+                  .done()
+                .done()
+
+                .when(".*").get(staticFileFetcher).done()
+
+                .when(".*").any(redirectionEndpoint).done()
 
                 .build();
     }
 
-    public List<Route> getRoutes() {
+    @Override
+    public List<Route> getRoutes(String acceptHeader) {
         return routes;
+    }
+
+    @Override
+    public Tuple<HttpServletRequest, HttpServletResponse> preRouting(HttpServletRequest request, HttpServletResponse response) {
+        return new Tuple<>(request, response);
+    }
+
+    @Override
+    public void postRouting(HttpServletRequest req, HttpServletResponse resp, Exception onError) {
+
     }
 }

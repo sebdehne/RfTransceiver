@@ -1,0 +1,60 @@
+<h2>Test Proxy rules <button class="btn btn-primary" ng-click="showRule()">Add</button></h2>
+
+<div class="row row-hover" ng-repeat="key in sortedKeys" ng-class-even="'row-even'" ng-class-odd="'row-odd'" ng-click="showRule(key)">
+    <div class="col-md-12">
+        <div class="row">
+            <div class="col-md-2">{{key}}{{rules[key].enabled ? '' : ' (disabled)'}}</div>
+            <div class="col-md-7">{{rules[key].url_pattern}}</div>
+            <div class="col-md-1">{{rules[key].max_use_counter}}</div>
+            <div class="col-md-2">{{rules[key].timeout_at | date:'medium'}}</div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">&nbsp;</div>
+        </div>
+        <div class="row" ng-show="rules[key].xpath_criteria">
+            <div class="col-md-2">&nbsp;</div>
+            <div class="col-md-2">XPath criteria:</div>
+            <div class="col-md-8">
+                <div class="row" ng-repeat="xpath in rules[key].xpath_criteria">
+                    <div class="col-md-12">{{xpath.xpath}}={{xpath.regex}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="row" ng-show="rules[key].json_path_criteria">
+            <div class="col-md-2">&nbsp;</div>
+            <div class="col-md-2">JSON Path criteria:</div>
+            <div class="col-md-8">
+                <div class="row" ng-repeat="jsonp in rules[key].json_path_criteria">
+                    <div class="col-md-8">{{jsonp.json_path}}={{jsonp.regex}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="row" ng-show="rules[key].proxy_action">
+            <div class="col-md-2">&nbsp;</div>
+            <div class="col-md-10">Proxy to: {{rules[key].proxy_action.target_hosts}}</div>
+        </div>
+        <div class="row" ng-show="rules[key].mock_action">
+            <div class="col-md-2">&nbsp;</div>
+            <div class="col-md-10">
+                <div class="row">
+                    <div class="col-md-2">Respond:</div>
+                    <div class="col-md-10">{{rules[key].mock_action.status_code}} {{responseCodes[rules[key].mock_action.status_code]}}</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2">Response headers: </div>
+                    <div class="col-md-10">
+                        <div class="row" ng-repeat="header in rules[key].mock_action.response_headers">
+                            <div class="col-md-12">{{header.header}}={{header.value}}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2">Body:</div>
+                    <div class="col-md-10">
+                        <pre>{{rules[key].mock_action.response_body}}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

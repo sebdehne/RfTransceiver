@@ -1,0 +1,280 @@
+<div class="modal-header">
+    <h3><span ng-show="existing">Edit</span><span ng-show="!existing">Add new</span> rule</h3>
+
+    <ul class="nav nav-tabs">
+        <li role="presentation" ng-class="{active:isTabSelected(1)}"><a ng-click="onSelectTab(1)">General</a></li>
+        <li role="presentation" ng-class="{active:isTabSelected(2)}"><a ng-click="onSelectTab(2)">Criteria</a></li>
+        <li role="presentation" ng-class="{active:isTabSelected(3)}"><a ng-click="onSelectTab(3)">Action</a></li>
+    </ul>
+
+</div>
+<form class="form-horizontal" name="ruleEditForm">
+    <div class="modal-body">
+
+        <div ng-show="isTabSelected(1)">
+            <div class="form-group" ng-class="ruleEditForm.key_field.$invalid ? 'has-error' : ''">
+                <label for="key" class="col-sm-4 control-label">Property key:</label>
+
+                <div class="col-sm-8">
+                    <input type="text" name="key_field" id="key" ng-model="key" class="form-control"
+                           placeholder="someKey"
+                           ng-pattern="/^\S+$/">
+                    <span ng-show="ruleEditForm.key_field.$invalid">Not a legal rule key</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="enabled" class="col-sm-4 control-label">Enabled:</label>
+
+                <div class="col-sm-8">
+                    <input type="checkbox" name="enabled_field" id="enabled" ng-model="rule.enabled">
+                </div>
+            </div>
+
+            <div class="form-group" ng-class="ruleEditForm.max_use_counter.$invalid ? 'has-error' : ''">
+                <label for="max_use_counter" class="col-sm-4 control-label">Max use counter:</label>
+
+                <div class="col-sm-8">
+                    <input type="text" name="max_use_counter" id="max_use_counter" ng-model="rule.max_use_counter"
+                           class="form-control"
+                           placeholder="10"
+                           ng-pattern="/^\d+$/">
+                    <span ng-show="ruleEditForm.max_use_counter.$invalid">Not a legal number</span>
+                </div>
+            </div>
+
+
+            <div class="form-group" ng-class="ruleEditForm.timeout_at.$invalid ? 'has-error' : ''">
+                <label for="timeout_at" class="col-sm-4 control-label">Timeout at:</label>
+
+                <div class="col-sm-8">
+                    <input type="text" name="timeout_at" id="timeout_at" value="{{rule.timeout_at| date:'medium'}}" class="form-control"
+                           placeholder=""
+                           ng-disabled="true"
+                           ng-pattern="/^\d+$/">
+                    <span ng-show="ruleEditForm.timeout_at.$invalid">Not a legal number</span>
+
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <button ng-click="clearTimeout()">clear</button>
+                            <button ng-click="addTimeout(1)">+ 1min</button>
+                            <button ng-click="addTimeout(10)">+ 10min</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div ng-show="isTabSelected(2)">
+            <div class="form-group" ng-class="ruleEditForm.url_field.$invalid ? 'has-error' : ''">
+                <label for="url" class="col-sm-4 control-label">Url pattern:</label>
+
+                <div class="col-sm-8">
+                    <input type="text" name="url_field" id="url" ng-model="rule.url_pattern" class="form-control"
+                           placeholder=".*"
+                           ng-pattern="/^\S+$/">
+                    <span ng-show="ruleEditForm.url_field.$invalid">Not a legal url pattern</span>
+                </div>
+            </div>
+
+            <div class="form-group" ng-class="ruleEditForm.xpath_criteria.$invalid ? 'has-error' : ''">
+                <label class="col-sm-4 control-label">Xpath Criteria:</label>
+
+                <div class="col-sm-8">
+                    <div ng-repeat="(id,xpath) in rule.xpath_criteria">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <input type="text" class="form-control" value="{{xpath.xpath}}" ng-disabled="true">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <input type="text" class="form-control" value="{{xpath.regex}}" ng-disabled="true">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button class="btn" ng-click="deleteXpath(id)">delete</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <input type="text" class="form-control" ng-model="newXpath">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <input type="text" class="form-control" ng-model="newXpathRegex">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button class="btn" ng-click="addXpath()">add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="form-group" ng-class="ruleEditForm.json_path_criteria.$invalid ? 'has-error' : ''">
+                <label class="col-sm-4 control-label">JSON Path Criteria:</label>
+
+                <div class="col-sm-8">
+                    <div ng-repeat="(id,json) in rule.json_path_criteria">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <input type="text" class="form-control" value="{{json.json_path}}" ng-disabled="true">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <input type="text" class="form-control" value="{{json.regex}}" ng-disabled="true">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button class="btn" ng-click="deleteJsonPath(id)">delete</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <input type="text" class="form-control" ng-model="newJsonPath">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <input type="text" class="form-control" ng-model="newJsonPathRegex">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button class="btn" ng-click="addJsonPath()">add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div ng-show="isTabSelected(3)">
+            <div class="radio">
+                <label>
+                    <input ng-click="actionTypeSelected()" ng-model="action_type" type="radio" name="action_type"
+                           id="proxy" value="proxy">Forward request to another HTTP server
+                </label>
+            </div>
+            <div class="radio">
+                <label>
+                    <input ng-click="actionTypeSelected()" ng-model="action_type" type="radio" name="action_type"
+                           id="mock" value="mock">Generate mock response
+                </label>
+            </div>
+
+            <br>
+
+            <div ng-show="action_type == 'proxy'">
+
+                <div class="form-group">
+                    <label class="col-sm-4 control-label">Target hosts:</label>
+
+                    <div class="col-sm-8">
+                        <div class="row" ng-repeat="(id,host) in rule.proxy_action.target_hosts">
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" value="{{host}}" ng-disabled="true">
+                            </div>
+                            <div class="col-sm-3">
+                                <button class="btn" ng-click="deleteTargetHost(id)">Del</button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" ng-model="newTargetHost">
+                            </div>
+                            <div class="col-sm-3">
+                                <button class="btn" ng-click="addTargetHost()">Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+            <div ng-show="action_type == 'mock'">
+
+                <div class="form-group" ng-class="ruleEditForm.status_code.$invalid ? 'has-error' : ''">
+                    <label for="status_code" class="col-sm-4 control-label">Status code:</label>
+
+                    <div class="col-sm-8">
+                        <input type="text" name="status_code" id="status_code" ng-model="rule.mock_action.status_code"
+                               class="form-control"
+                               placeholder="200"
+                               ng-pattern="/^\d\d\d$/">
+                        <span ng-show="ruleEditForm.status_code.$invalid">Not a legal status code</span>
+                    </div>
+                </div>
+
+                <div class="form-group" ng-class="ruleEditForm.response_headers.$invalid ? 'has-error' : ''">
+                    <label class="col-sm-4 control-label">Response headers:</label>
+
+                    <div class="col-sm-8">
+                        <div ng-repeat="(id,header) in rule.mock_action.response_headers">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <input type="text" class="form-control" value="{{header.header}}"
+                                           ng-disabled="true">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <input type="text" class="form-control" value="{{header.value}}" ng-disabled="true">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <button class="btn" ng-click="deleteResponseHeader(id)">delete</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <input type="text" class="form-control" ng-model="newResponseHeader">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <input type="text" class="form-control" ng-model="newResponseHeaderValue">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <button class="btn" ng-click="addResponseHeader()">add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" ng-class="ruleEditForm.response_body.$invalid ? 'has-error' : ''">
+                    <label for="response_body" class="col-sm-4 control-label">Response body:</label>
+
+                    <div class="col-sm-8">
+                        <textarea rows="4" cols="50" name="response_body" id="response_body"
+                                  ng-model="rule.mock_action.response_body" class="form-control"></textarea>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-footer">
+        <button class="btn btn-danger" ng-click="delete()" ng-show="existing">Delete</button>
+        <button class="btn btn-primary" ng-click="submit()" ng-disabled="!ruleEditForm.$valid">Submit</button>
+        <button class="btn btn-warning" ng-click="close()">Cancel</button>
+    </div>
+</form>

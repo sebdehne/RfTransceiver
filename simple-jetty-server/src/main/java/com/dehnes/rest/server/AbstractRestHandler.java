@@ -1,5 +1,6 @@
 package com.dehnes.rest.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -7,30 +8,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.eclipse.jetty.http.MimeTypes;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Response;
 import org.json.JSONObject;
 
 import com.dehnes.rest.server.config.TriConsumer;
 
-public abstract class AbstractRestHandler implements TriConsumer<Request, Response, List<String>> {
+public abstract class AbstractRestHandler implements TriConsumer<HttpServletRequest, HttpServletResponse, List<String>> {
 
     private final List<MimeTypes.Type> allowedTypes = Arrays.asList(
             MimeTypes.Type.APPLICATION_JSON,
             MimeTypes.Type.TEXT_JSON
     );
 
-    private final ThreadLocal<Request> currentRequest = new ThreadLocal<>();
+    private final ThreadLocal<HttpServletRequest> currentRequest = new ThreadLocal<>();
 
     @Override
-    public void accept(Request request, Response response, List<String> fields) {
+    public void accept(HttpServletRequest request, HttpServletResponse response, List<String> fields) {
         currentRequest.set(request);
         try {
 
             JSONObject body;
             try {
-                body = extractBody(request);
+                if (request.getContentLength() > 0) {
+                    assertIsJson(request.getContentType());
+                    body = new JSONObject(extractBody(request));
+                } else {
+                    body = null;
+                }
             } catch (Exception e) {
                 throw new RuntimeException("Could not read body from request", e);
             }
@@ -46,35 +53,52 @@ public abstract class AbstractRestHandler implements TriConsumer<Request, Respon
         }
     }
 
-    protected Request getRequest() {
+    protected HttpServletRequest getRequest() {
         return currentRequest.get();
     }
 
-    private JSONObject extractBody(Request request) throws IOException {
-        if (request.getContentLength() > 0) {
-
-            String contentType = request.getContentType();
-            MimeTypes.Type typeFound = null;
-            for (MimeTypes.Type type : allowedTypes) {
-                if (contentType.startsWith(type.getBaseType().toString())) {
-                    typeFound = type;
-                }
+    private void assertIsJson(String contentType) {
+        MimeTypes.Type typeFound = null;
+        for (MimeTypes.Type type : allowedTypes) {
+            if (contentType.startsWith(type.getBaseType().toString())) {
+                typeFound = type;
             }
+        }
 
-            if (typeFound == null) {
-                throw new RuntimeException("contentype '" + request.getContentType() + "' not supported");
-            }
+        if (typeFound == null) {
+            throw new RuntimeException("contentype '" + contentType + "' not supported");
+        }
+    }
 
+    public static String extractBody(HttpServletRequest request) {
+        try {
             String charSet = MimeTypes.getCharsetFromContentType(request.getContentType());
             if (charSet == null) {
                 charSet = Charset.defaultCharset().toString();
             }
-
-            byte[] buf = new byte[request.getContentLength()];
-            request.getHttpInput().read(buf, 0, buf.length);
-            return new JSONObject(new String(buf, charSet));
+            return new String(extractRawBody(request), charSet);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not read request body", e);
         }
-        return null;
+    }
+
+    public static byte[] extractRawBody(HttpServletRequest request) {
+        try {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+            int nRead;
+            byte[] data = new byte[request.getContentLength()];
+
+            while ((nRead = request.getInputStream().read(data, 0, data.length)) != -1) {
+                buffer.write(data, 0, nRead);
+            }
+
+            buffer.flush();
+
+            return buffer.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Could not read request body", e);
+        }
     }
 
     public abstract void handle(
