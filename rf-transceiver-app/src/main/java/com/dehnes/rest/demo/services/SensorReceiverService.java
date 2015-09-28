@@ -3,7 +3,6 @@ package com.dehnes.rest.demo.services;
 import com.dehnes.rest.demo.clients.influxdb.InfluxDBConnector;
 import com.dehnes.rest.demo.clients.serial.SerialConnection;
 import com.dehnes.rest.demo.services.humidity.HumidityService;
-import com.dehnes.rest.demo.services.temperature.TemperatureHandleService;
 import com.dehnes.rest.demo.utils.ByteTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,14 +19,12 @@ public class SensorReceiverService {
     private final SensorRepo sensorRepo;
     private final SerialConnection serialConnection;
     private final Consumer<SerialConnection.RfPacket> listener;
-    private final TemperatureHandleService temperatureHandleService;
     private final HumidityService humidityService;
     private final InfluxDBConnector influxDBConnector;
 
-    public SensorReceiverService(SerialConnection serialConnection, SensorRepo sensorRepo, TemperatureHandleService temperatureHandleService, HumidityService humidityService, InfluxDBConnector influxDBConnector) {
+    public SensorReceiverService(SerialConnection serialConnection, SensorRepo sensorRepo, HumidityService humidityService, InfluxDBConnector influxDBConnector) {
         this.serialConnection = serialConnection;
         this.sensorRepo = sensorRepo;
-        this.temperatureHandleService = temperatureHandleService;
         this.humidityService = humidityService;
         this.influxDBConnector = influxDBConnector;
         listener = this::handleIncoming;
@@ -56,9 +53,12 @@ public class SensorReceiverService {
         Optional<Integer> humidity = Optional.empty();
         Optional<Integer> counter = Optional.empty();
         Optional<Integer> light = Optional.empty();
+        Optional<Integer> batVolt = Optional.empty();
 
         if (sensorDef.getVersion().getTemperaturePos().isPresent()) {
-            temp = temperatureHandleService.extractTemperature(sensorDef.getVersion().getTemperaturePos().get(), packet, sensorDef);
+            temp = sensorDef.getThermistorConfig().tempValueToResistence(
+                    getAdcValue(packet, sensorDef.getVersion().getTemperaturePos().get()));
+            
             if (temp.isPresent()) {
                 logger.info(sensorDef.getName() + " - temperature: " + temp.get());
 
@@ -78,13 +78,26 @@ public class SensorReceiverService {
             counter = Optional.of(packet.getMessage()[sensorDef.getVersion().getCounterPos().get()]);
         }
         if (sensorDef.getVersion().getLightPos().isPresent()) {
-            int lightLow = packet.getMessage()[sensorDef.getVersion().getLightPos().get()];
-            int lightHi = packet.getMessage()[sensorDef.getVersion().getLightPos().get() + 1];
-            light = Optional.of(ByteTools.merge(lightLow, lightHi));
+            light = Optional.of(getAdcValue(packet, sensorDef.getVersion().getLightPos().get()));
+        }
+
+        if (sensorDef.getVersion().getBatteryVoltPos().isPresent()) {
+            batVolt = Optional.of(calcVoltage(getAdcValue(packet, sensorDef.getVersion().getBatteryVoltPos().get())));
         }
 
         // record received data in db
-        influxDBConnector.recordSensorData(sensorDef, temp, humidity, counter, light);
+        influxDBConnector.recordSensorData(sensorDef, temp, humidity, counter, light, batVolt);
     }
+
+    private int getAdcValue(SerialConnection.RfPacket packet, Integer pos) {
+        int valueLow = packet.getMessage()[pos];
+        int valueHigh = packet.getMessage()[pos + 1];
+        return ByteTools.merge(valueLow, valueHigh);
+    }
+
+    private int calcVoltage(int adcValue) {
+        return ((102300 / adcValue) * 6 ) / 10;
+    }
+
 
 }

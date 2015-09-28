@@ -8,6 +8,7 @@ public class SensorRepo {
 
     public enum VersionDef {
         HW_REV_4_V1(Optional.of(0), Optional.of(2), Optional.of(4), Optional.<Integer>empty(), Optional.<Integer>empty()),
+        HW_REV_4_V2(Optional.of(0), Optional.of(2), Optional.of(4), Optional.<Integer>empty(), Optional.of(7)),
         HW_REV_5_V1(Optional.of(0), Optional.of(2), Optional.of(4), Optional.of(5), Optional.<Integer>empty()),
         HW_REV_5_V2(Optional.of(0), Optional.of(2), Optional.of(4), Optional.of(5), Optional.of(7));
 

@@ -55,7 +55,8 @@ public class InfluxDBConnector {
             Optional<Integer> temp,
             Optional<Integer> humidity,
             Optional<Integer> counter,
-            Optional<Integer> light) {
+            Optional<Integer> light,
+            Optional<Integer> batVolt) {
 
 
         List<KeyValue> values = new LinkedList<>();
@@ -70,6 +71,9 @@ public class InfluxDBConnector {
         }
         if (light.isPresent()) {
             values.add(new KeyValue("light", String.valueOf(light.get())));
+        }
+        if (batVolt.isPresent()) {
+            values.add(new KeyValue("battery_volt", String.valueOf(batVolt.get())));
         }
 
         if (values.size() > 0) {
