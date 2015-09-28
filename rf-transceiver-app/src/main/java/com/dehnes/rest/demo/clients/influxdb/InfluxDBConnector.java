@@ -1,11 +1,14 @@
 package com.dehnes.rest.demo.clients.influxdb;
 
 import com.dehnes.rest.demo.services.SensorRepo;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -15,6 +18,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class InfluxDBConnector {
+    private final static Logger logger = LoggerFactory.getLogger(InfluxDBConnector.class);
 
     private static final String dbName = "sensor_data";
     private static final String baseUrl = "http://localhost:8086";
@@ -77,16 +81,23 @@ public class InfluxDBConnector {
         try {
 
             StringBuilder sb = new StringBuilder();
-            sb.append(type).append(" ");
+            sb.append(type);
 
             if (tag.isPresent()) {
-                sb.append(",").append(tag.get().key).append("=").append(tag.get().value).append(" ");
+                sb.append(",").append(tag.get().key).append("=").append(tag.get().value);
             }
-            sb.append(values.stream().map(v -> v.key + "=" + v.value).collect(Collectors.joining(",")));
+            sb.append(" ").append(values.stream().map(v -> v.key + "=" + v.value).collect(Collectors.joining(",")));
 
-            Request.Post(baseUrl + "/write?db=" + dbName)
+            logger.debug("About to send {}", sb);
+
+            Response result = Request.Post(baseUrl + "/write?db=" + dbName)
                     .bodyString(sb.toString(), ContentType.TEXT_PLAIN)
                     .execute();
+
+            HttpResponse httpResponse = result.returnResponse();
+            if (httpResponse != null && httpResponse.getStatusLine() != null && httpResponse.getStatusLine().getStatusCode() > 299) {
+                throw new RuntimeException("Could not write to InFluxDb" + httpResponse);
+            }
 
         } catch (IOException e) {
             throw new RuntimeException(e);
