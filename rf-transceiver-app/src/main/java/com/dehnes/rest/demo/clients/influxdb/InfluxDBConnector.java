@@ -120,7 +120,7 @@ public class InfluxDBConnector {
         if (timeMax.isPresent()) {
             query += " AND time < " + (timeMax.get() / 1000) + "s";
         }
-        query += " LIMIT " + limit;
+        query += " order by time desc LIMIT " + limit;
 
         try {
             URIBuilder b = new URIBuilder(baseUrl + "/query");
