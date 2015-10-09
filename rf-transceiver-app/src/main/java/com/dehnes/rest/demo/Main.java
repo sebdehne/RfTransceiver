@@ -10,10 +10,10 @@ import java.util.concurrent.Executors;
 
 public class Main {
 
-    public static final int PORT = Integer.parseInt(System.getProperty("JETTY_PORT", "8080"));
+    public static final int PORT = Integer.parseInt(System.getProperty("JETTY_PORT", "9090"));
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("DST_HOST", "home.dehnes.com");
+        System.setProperty("DST_HOST", "192.168.1.1");
 
         AppContext config = new AppContext();
         config.addInstance(ExecutorService.class, Executors.newCachedThreadPool());
