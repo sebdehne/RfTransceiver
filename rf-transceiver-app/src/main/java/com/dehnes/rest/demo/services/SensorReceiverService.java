@@ -3,6 +3,7 @@ package com.dehnes.rest.demo.services;
 import com.dehnes.rest.demo.clients.influxdb.InfluxDBConnector;
 import com.dehnes.rest.demo.clients.serial.SerialConnection;
 import com.dehnes.rest.demo.services.humidity.HumidityService;
+import com.dehnes.rest.demo.services.temperature.TemperatureConfig;
 import com.dehnes.rest.demo.utils.ByteTools;
 import com.dehnes.rest.demo.utils.MathTools;
 import org.slf4j.Logger;
@@ -59,9 +60,9 @@ public class SensorReceiverService {
         if (sensorDef.getVersion().getTemperaturePos().isPresent()) {
             Optional<Integer> temperature = sensorDef.getThermistorConfig().tempValueToResistence(
                     getAdcValue(packet, sensorDef.getVersion().getTemperaturePos().get()));
-            temp = temperature.map(t -> MathTools.divideBy100(sensorId));
 
-            if (temp.isPresent()) {
+            if (temperature.isPresent()) {
+                temp = temperature.map(MathTools::divideBy100);
                 logger.info(sensorDef.getName() + " - temperature: " + temp.get());
 
                 if (sensorDef.getVersion().getHumidityPos().isPresent()) {
@@ -91,7 +92,7 @@ public class SensorReceiverService {
         influxDBConnector.recordSensorData(sensorDef, temp, humidity, counter, light, batVolt);
     }
 
-    private int getAdcValue(SerialConnection.RfPacket packet, Integer pos) {
+    private static int getAdcValue(SerialConnection.RfPacket packet, Integer pos) {
         int valueLow = packet.getMessage()[pos];
         int valueHigh = packet.getMessage()[pos + 1];
         return ByteTools.merge(valueLow, valueHigh);

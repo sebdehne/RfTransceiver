@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 public class MathTools {
 
     public static void main(String[] args) {
-        System.out.println(divideBy100(303));
+        System.out.println(divideBy100(2021));
     }
 
     public static String divideBy100(Integer in) {
