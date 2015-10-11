@@ -225,7 +225,7 @@ public class HumidityService {
 
     }});
 
-    public Optional<Integer> extractHumdity(
+    public Optional<String> extractHumdity(
             int humidityPos,
             SerialConnection.RfPacket packet,
             int temperature) {
@@ -251,7 +251,7 @@ public class HumidityService {
         return findHumidity(table.get(), resistance);
     }
 
-    private Optional<Integer> findHumidity(TemperatureTable table, int resistance) {
+    private Optional<String> findHumidity(TemperatureTable table, int resistance) {
         TableEntry lastEntry = null;
         for (TableEntry te : table.entries) {
             if (lastEntry == null || resistance <= te.resistance) {
@@ -263,12 +263,12 @@ public class HumidityService {
             int deltaToPreviousTable = lastEntry.resistance - resistance;
             int deltaToNextTable = resistance - te.resistance;
             if (deltaToNextTable > deltaToPreviousTable) {
-                return Optional.of(lastEntry.relativeHumidity);
+                return Optional.of(String.valueOf(lastEntry.relativeHumidity));
             } else {
-                return Optional.of(te.relativeHumidity);
+                return Optional.of(String.valueOf(te.relativeHumidity));
             }
         }
-        return Optional.of(100);
+        return Optional.of(String.valueOf(100));
     }
 
     private Optional<TemperatureTable> findTable(int temperature) {

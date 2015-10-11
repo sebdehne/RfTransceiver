@@ -52,28 +52,28 @@ public class InfluxDBConnector {
 
     public void recordSensorData(
             SensorRepo.SensorDef sensorDef,
-            Optional<Integer> temp,
-            Optional<Integer> humidity,
-            Optional<Integer> counter,
-            Optional<Integer> light,
-            Optional<Integer> batVolt) {
+            Optional<String> temp,
+            Optional<String> humidity,
+            Optional<String> counter,
+            Optional<String> light,
+            Optional<String> batVolt) {
 
 
         List<KeyValue> values = new LinkedList<>();
         if (temp.isPresent()) {
-            values.add(new KeyValue("temperature", String.valueOf(temp.get())));
+            values.add(new KeyValue("temperature", temp.get()));
         }
         if (humidity.isPresent()) {
-            values.add(new KeyValue("humidity", String.valueOf(humidity.get())));
+            values.add(new KeyValue("humidity", humidity.get()));
         }
         if (counter.isPresent()) {
-            values.add(new KeyValue("counter", String.valueOf(counter.get())));
+            values.add(new KeyValue("counter", counter.get()));
         }
         if (light.isPresent()) {
-            values.add(new KeyValue("light", String.valueOf(light.get())));
+            values.add(new KeyValue("light", light.get()));
         }
         if (batVolt.isPresent()) {
-            values.add(new KeyValue("battery_volt", String.valueOf(batVolt.get())));
+            values.add(new KeyValue("battery_volt", batVolt.get()));
         }
 
         if (values.size() > 0) {

@@ -4,6 +4,7 @@ import com.dehnes.rest.demo.clients.influxdb.InfluxDBConnector;
 import com.dehnes.rest.demo.clients.serial.SerialConnection;
 import com.dehnes.rest.demo.services.humidity.HumidityService;
 import com.dehnes.rest.demo.utils.ByteTools;
+import com.dehnes.rest.demo.utils.MathTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,21 +50,22 @@ public class SensorReceiverService {
             return;
         }
 
-        Optional<Integer> temp = Optional.empty();
-        Optional<Integer> humidity = Optional.empty();
-        Optional<Integer> counter = Optional.empty();
-        Optional<Integer> light = Optional.empty();
-        Optional<Integer> batVolt = Optional.empty();
+        Optional<String> temp = Optional.empty();
+        Optional<String> humidity = Optional.empty();
+        Optional<String> counter = Optional.empty();
+        Optional<String> light = Optional.empty();
+        Optional<String> batVolt = Optional.empty();
 
         if (sensorDef.getVersion().getTemperaturePos().isPresent()) {
-            temp = sensorDef.getThermistorConfig().tempValueToResistence(
+            Optional<Integer> temperature = sensorDef.getThermistorConfig().tempValueToResistence(
                     getAdcValue(packet, sensorDef.getVersion().getTemperaturePos().get()));
-            
+            temp = temperature.map(t -> MathTools.divideBy100(sensorId));
+
             if (temp.isPresent()) {
                 logger.info(sensorDef.getName() + " - temperature: " + temp.get());
 
                 if (sensorDef.getVersion().getHumidityPos().isPresent()) {
-                    humidity = humidityService.extractHumdity(sensorDef.getVersion().getHumidityPos().get(), packet, temp.get());
+                    humidity = humidityService.extractHumdity(sensorDef.getVersion().getHumidityPos().get(), packet, temperature.get());
                     if (humidity.isPresent()) {
                         logger.info(sensorDef.getName() + " - relative humidity: " + humidity.get());
                     } else {
@@ -75,14 +77,14 @@ public class SensorReceiverService {
             }
         }
         if (sensorDef.getVersion().getCounterPos().isPresent()) {
-            counter = Optional.of(packet.getMessage()[sensorDef.getVersion().getCounterPos().get()]);
+            counter = Optional.of(String.valueOf(packet.getMessage()[sensorDef.getVersion().getCounterPos().get()]));
         }
         if (sensorDef.getVersion().getLightPos().isPresent()) {
-            light = Optional.of(getAdcValue(packet, sensorDef.getVersion().getLightPos().get()));
+            light = Optional.of(String.valueOf(getAdcValue(packet, sensorDef.getVersion().getLightPos().get())));
         }
 
         if (sensorDef.getVersion().getBatteryVoltPos().isPresent()) {
-            batVolt = Optional.of(calcVoltage(getAdcValue(packet, sensorDef.getVersion().getBatteryVoltPos().get())));
+            batVolt = Optional.of(MathTools.divideBy100(calcVoltage(getAdcValue(packet, sensorDef.getVersion().getBatteryVoltPos().get()))));
         }
 
         // record received data in db

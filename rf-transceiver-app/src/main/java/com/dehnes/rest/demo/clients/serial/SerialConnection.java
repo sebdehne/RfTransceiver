@@ -280,6 +280,12 @@ public class SerialConnection {
                     continue;
                 }
 
+                if (writePos.get() >= 4 && msgLen < 1) {
+                    logger.debug("Skipping negative msgLen");
+                    compact(buf, 4, writePos);
+                    continue;
+                }
+
                 // do we have a complete packet?
                 if (writePos.get() >= 4 + msgLen) {
                     byte[] msg = new byte[msgLen];
