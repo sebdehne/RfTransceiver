@@ -13,26 +13,22 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class SerialConnection {
     private static final Logger logger = LoggerFactory.getLogger(SerialConnection.class);
 
     private static final byte MY_DST = 1;
 
-    private final ExecutorService threadPool;
-    private final Set<Consumer<RfPacket>> listeners = new HashSet<>();
+    private final Set<Function<RfPacket, Boolean>> listeners = new HashSet<>();
     private final SocketAddress dst;
     private final AtomicBoolean isStarted = new AtomicBoolean(false);
-
-    private Thread readerThread; // guarded by "this"
 
     // local to the readerThread
     private Socket socket;
@@ -43,8 +39,7 @@ public class SerialConnection {
     private OutputStream out;
     private final LinkedList<SendRequest> sendingQueue = new LinkedList<>();
 
-    public SerialConnection(ExecutorService threadPool) {
-        this.threadPool = threadPool;
+    public SerialConnection() {
         this.dst = new InetSocketAddress(
                 System.getProperty("DST_HOST", "localhost"),
                 Integer.parseInt(System.getProperty("DST_PORT", "23000")));
@@ -86,7 +81,7 @@ public class SerialConnection {
         }
     }
 
-    public void registerListener(Consumer<RfPacket> listener) {
+    public void registerListener(Function<RfPacket, Boolean> listener) {
         synchronized (listeners) {
             if (listeners.contains(listener)) {
                 throw new RuntimeException("Listener already registered");
@@ -95,7 +90,7 @@ public class SerialConnection {
         }
     }
 
-    public void unregisterListener(Consumer<RfPacket> listener) {
+    public void unregisterListener(Function<RfPacket, Boolean> listener) {
         synchronized (listeners) {
             if (!listeners.contains(listener)) {
                 throw new RuntimeException("Listener does not exist");
@@ -137,7 +132,7 @@ public class SerialConnection {
 
         isStarted.set(true);
 
-        readerThread = new Thread(() -> {
+        Thread readerThread = new Thread(() -> {
             try {
                 readTask().run();
             } catch (Exception e) {
@@ -153,6 +148,26 @@ public class SerialConnection {
                 logger.info("writer thread failed permanently", e);
             }
         }, "writerThread").start();
+    }
+
+    @PreDestroy
+    public synchronized void stop() {
+        if (!isStarted.get()) {
+            return;
+        }
+
+        isStarted.set(false);
+
+        // notify the writer
+        outputStreamLock.lock();
+        try {
+            sendingSyncer.signalAll();
+        } finally {
+            outputStreamLock.unlock();
+        }
+
+        // notify the reader
+        close(socket);
     }
 
     private Runnable writeTask() {
@@ -178,7 +193,7 @@ public class SerialConnection {
                         sendingQueue.addFirst(sendRequest);
                         try {
                             Thread.sleep(1000);
-                        } catch (InterruptedException e) {
+                        } catch (InterruptedException ignored) {
                         }
                         continue;
                     }
@@ -336,40 +351,21 @@ public class SerialConnection {
         writePos.set(writePos.get() - firstByte);
     }
 
-    @PreDestroy
-    public synchronized void stop() {
-        if (!isStarted.get()) {
-            return;
-        }
-
-        isStarted.set(false);
-
-        // notify the writer
-        outputStreamLock.lock();
-        try {
-            sendingSyncer.signalAll();
-        } finally {
-            outputStreamLock.unlock();
-        }
-
-        // notify the reader
-        close(socket);
-    }
-
     private void distributeNewMessage(RfPacket rfPacket) {
         synchronized (listeners) {
-            listeners.forEach(l -> threadPool.submit(wrap(() -> l.accept(rfPacket))));
+            if (!listeners.stream().filter(l -> exceptionLogger(l, rfPacket)).findFirst().isPresent()) {
+                logger.info("No handler found for this sensor " + rfPacket.getRemoteAddr());
+            }
         }
     }
 
-    private Runnable wrap(Runnable r) {
-        return () -> {
-            try {
-                r.run();
-            } catch (Exception e) {
-                logger.error("", e);
-            }
-        };
+    private Boolean exceptionLogger(Function<RfPacket, Boolean> r, RfPacket rfPacket) {
+        try {
+            return r.apply(rfPacket);
+        } catch (Exception e) {
+            logger.error("", e);
+            return false;
+        }
     }
 
     private boolean reconnect() {

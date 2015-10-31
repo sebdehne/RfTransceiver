@@ -1,4 +1,4 @@
-package com.dehnes.rest.demo.services.temperature;
+package com.dehnes.rest.demo.services.analog_sensors.temperature;
 
 import com.dehnes.rest.demo.utils.ADCTools;
 

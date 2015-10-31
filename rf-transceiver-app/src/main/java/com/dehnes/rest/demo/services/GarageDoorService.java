@@ -12,7 +12,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.Arrays;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class GarageDoorService {
     private static final Logger logger = LoggerFactory.getLogger(GarageDoorService.class);
@@ -20,7 +20,7 @@ public class GarageDoorService {
 
     private final String dbType = "garage";
     private final SerialConnection serialConnection;
-    private final Consumer<SerialConnection.RfPacket> listener;
+    private final Function<SerialConnection.RfPacket, Boolean> listener;
     private final InfluxDBConnector influxDBConnector;
     private final CommandSender commandSender;
 
@@ -41,9 +41,9 @@ public class GarageDoorService {
         serialConnection.unregisterListener(listener);
     }
 
-    private void handleIncoming(SerialConnection.RfPacket rfPacket) {
+    private boolean handleIncoming(SerialConnection.RfPacket rfPacket) {
         if (rfPacket.getRemoteAddr() != sender_id) {
-            return;
+            return false;
         }
 
         /*
@@ -78,6 +78,8 @@ public class GarageDoorService {
                 new InfluxDBConnector.KeyValue("light", String.valueOf(lightIsOn)),
                 new InfluxDBConnector.KeyValue("door", String.valueOf(doorIsOpen))
         ));
+
+        return true;
     }
 
     public boolean sendOpenCommand() {

@@ -1,4 +1,4 @@
-package com.dehnes.rest.demo.services.humidity;
+package com.dehnes.rest.demo.services.analog_sensors.humidity;
 
 import com.dehnes.rest.demo.clients.serial.SerialConnection;
 import com.dehnes.rest.demo.utils.ADCTools;

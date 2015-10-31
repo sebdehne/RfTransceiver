@@ -1,6 +1,6 @@
 package com.dehnes.rest.demo.clients.influxdb;
 
-import com.dehnes.rest.demo.services.SensorRepo;
+import com.dehnes.rest.demo.services.analog_sensors.SensorRepo;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
@@ -21,7 +21,7 @@ public class InfluxDBConnector {
     private final static Logger logger = LoggerFactory.getLogger(InfluxDBConnector.class);
 
     private static final String dbName = "sensor_data";
-    private static final String baseUrl = "http://localhost:8086";
+    private static final String baseUrl = "http://" + System.getProperty("DST_HOST", "localhost") + ":8086";
 
 
     public InfluxDBConnector() {
@@ -33,8 +33,8 @@ public class InfluxDBConnector {
         String retentionPolicy = "alter RETENTION POLICY default ON sensor_data DURATION 260w"; // 5 years
         //
         try {
-            Request.Get("http://localhost:8086/query?q=" + URLEncoder.encode(createDbQuery, "UTF-8")).execute();
-            Request.Get("http://localhost:8086/query?q=" + URLEncoder.encode(retentionPolicy, "UTF-8")).execute();
+            Request.Get(baseUrl + "/query?q=" + URLEncoder.encode(createDbQuery, "UTF-8")).execute();
+            Request.Get(baseUrl + "/query?q=" + URLEncoder.encode(retentionPolicy, "UTF-8")).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

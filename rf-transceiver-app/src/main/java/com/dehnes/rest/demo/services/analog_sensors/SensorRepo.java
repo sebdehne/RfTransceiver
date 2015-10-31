@@ -1,6 +1,6 @@
-package com.dehnes.rest.demo.services;
+package com.dehnes.rest.demo.services.analog_sensors;
 
-import com.dehnes.rest.demo.services.temperature.TemperatureConfig;
+import com.dehnes.rest.demo.services.analog_sensors.temperature.TemperatureConfig;
 
 import java.util.*;
 

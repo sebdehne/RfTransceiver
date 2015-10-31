@@ -1,9 +1,8 @@
-package com.dehnes.rest.demo.services;
+package com.dehnes.rest.demo.services.analog_sensors;
 
 import com.dehnes.rest.demo.clients.influxdb.InfluxDBConnector;
 import com.dehnes.rest.demo.clients.serial.SerialConnection;
-import com.dehnes.rest.demo.services.humidity.HumidityService;
-import com.dehnes.rest.demo.services.temperature.TemperatureConfig;
+import com.dehnes.rest.demo.services.analog_sensors.humidity.HumidityService;
 import com.dehnes.rest.demo.utils.ByteTools;
 import com.dehnes.rest.demo.utils.MathTools;
 import org.slf4j.Logger;
@@ -12,19 +11,19 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
-public class SensorReceiverService {
+public class AnalogTemperatureHumiditySensorService {
 
-    private static final Logger logger = LoggerFactory.getLogger(SensorReceiverService.class);
+    private static final Logger logger = LoggerFactory.getLogger(AnalogTemperatureHumiditySensorService.class);
 
     private final SensorRepo sensorRepo;
     private final SerialConnection serialConnection;
-    private final Consumer<SerialConnection.RfPacket> listener;
+    private final Function<SerialConnection.RfPacket, Boolean> listener;
     private final HumidityService humidityService;
     private final InfluxDBConnector influxDBConnector;
 
-    public SensorReceiverService(SerialConnection serialConnection, SensorRepo sensorRepo, HumidityService humidityService, InfluxDBConnector influxDBConnector) {
+    public AnalogTemperatureHumiditySensorService(SerialConnection serialConnection, SensorRepo sensorRepo, HumidityService humidityService, InfluxDBConnector influxDBConnector) {
         this.serialConnection = serialConnection;
         this.sensorRepo = sensorRepo;
         this.humidityService = humidityService;
@@ -42,13 +41,12 @@ public class SensorReceiverService {
         serialConnection.unregisterListener(listener);
     }
 
-    private void handleIncoming(SerialConnection.RfPacket packet) {
+    private boolean handleIncoming(SerialConnection.RfPacket packet) {
         int sensorId = packet.getRemoteAddr();
         SensorRepo.SensorDef sensorDef = sensorRepo.getSensorDef(sensorId);
 
         if (sensorDef == null) {
-            logger.debug("Received message from unknown sensor " + packet.getRemoteAddr());
-            return;
+            return false;
         }
 
         Optional<String> temp = Optional.empty();
@@ -90,6 +88,8 @@ public class SensorReceiverService {
 
         // record received data in db
         influxDBConnector.recordSensorData(sensorDef, temp, humidity, counter, light, batVolt);
+
+        return true;
     }
 
     private static int getAdcValue(SerialConnection.RfPacket packet, Integer pos) {
