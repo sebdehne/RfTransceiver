@@ -1,6 +1,5 @@
 package com.dehnes.rest.demo;
 
-import com.dehnes.rest.demo.services.analog_sensors.AnalogTemperatureHumiditySensorService;
 import com.dehnes.rest.demo.services.chipcap2_sensors.ChipCap2SensorService;
 import com.dehnes.rest.server.EmbeddedJetty;
 import com.dehnes.rest.server.config.AppContext;
@@ -23,7 +22,6 @@ public class Main {
                 PORT,
                 config.getInstance(Routes.class)
         );
-        config.getInstance(AnalogTemperatureHumiditySensorService.class);
         config.getInstance(ChipCap2SensorService.class);
         config.start();
 

@@ -1,6 +1,5 @@
 package com.dehnes.rest.demo.clients.influxdb;
 
-import com.dehnes.rest.demo.services.analog_sensors.SensorRepo;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
@@ -51,7 +50,7 @@ public class InfluxDBConnector {
     }
 
     public void recordSensorData(
-            SensorRepo.SensorDef sensorDef,
+            String name,
             Optional<String> temp,
             Optional<String> humidity,
             Optional<String> counter,
@@ -77,7 +76,7 @@ public class InfluxDBConnector {
         }
 
         if (values.size() > 0) {
-            recordSensorData("sensor", Optional.of(new KeyValue("room", sensorDef.getName())), values);
+            recordSensorData("sensor", Optional.of(new KeyValue("room", name)), values);
         }
     }
 

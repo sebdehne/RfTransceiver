@@ -12,6 +12,7 @@ import javax.annotation.PreDestroy;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 public class ChipCap2SensorService {
@@ -27,7 +28,18 @@ public class ChipCap2SensorService {
         this.serialConnection = serialConnection;
         this.listener = this::handleIncoming;
         this.sensorRepo = Collections.unmodifiableMap(new HashMap<Integer, String>() {{
+            put(2, "bath");
+            put(3, "storage"); // TODO build
+            // 4 out // TODO build
+            // 5 out // TODO build
             put(6, "test-sensor");
+            put(7, "tv_room"); // TODO add battery
+            put(8, "living_room");
+            put(9, "hallway_down");
+            put(10, "sleeping_room");
+            put(11, "kitchen");
+            put(12, "mynthe_room");
+            put(13, "noan_room");
         }});
     }
 
@@ -42,18 +54,45 @@ public class ChipCap2SensorService {
     }
 
 
-    private boolean handleIncoming(SerialConnection.RfPacket rfPacket) {
-        String name = sensorRepo.get(rfPacket.getRemoteAddr());
+    private boolean handleIncoming(SerialConnection.RfPacket p) {
+        String name = sensorRepo.get(p.getRemoteAddr());
         if (name == null) {
             return false;
         }
 
+        String temp = MathTools.divideBy100(getTemperature(p));
+        String humidity = MathTools.divideBy100(getRelativeHumidity(p));
+        String light = String.valueOf(getAdcValue(p, 4));
+        String batteryVolt = MathTools.divideBy100(calcVoltage(getAdcValue(p, 6)));
+        String counter = String.valueOf(p.getMessage()[8]);
 
-        logger.info("Relative humidity " + MathTools.divideBy100(getRelativeHumidity(rfPacket)));
-        logger.info("Temperature " + MathTools.divideBy100(getTemperature(rfPacket)));
+        logger.info("Relative humidity " + humidity);
+        logger.info("Temperature " + temp);
+        logger.info("Light " + light);
+        logger.info("Counter " + counter);
+        logger.info("Battery " + batteryVolt);
 
+        // record received data in db
+        influxDBConnector.recordSensorData(
+                sensorRepo.get(p.getRemoteAddr()),
+                Optional.of(temp),
+                Optional.of(humidity),
+                Optional.of(counter),
+                Optional.of(light),
+                Optional.of(batteryVolt)
+        );
 
         return true;
+    }
+
+    private static int getAdcValue(SerialConnection.RfPacket packet, Integer pos) {
+        int valueHigh = packet.getMessage()[pos];
+        int valueLow = packet.getMessage()[pos + 1];
+        return ByteTools.merge(valueLow, valueHigh);
+    }
+
+    private int calcVoltage(int adcValue) {
+        return ((102300 / adcValue) * 6 ) / 10;
     }
 
     private int getTemperature(SerialConnection.RfPacket packet) {
