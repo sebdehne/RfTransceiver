@@ -29,17 +29,18 @@ public class ChipCap2SensorService {
         this.listener = this::handleIncoming;
         this.sensorRepo = Collections.unmodifiableMap(new HashMap<Integer, String>() {{
             put(2, "bath");
-            put(3, "storage"); // TODO build
-            // 4 out // TODO build
-            // 5 out // TODO build
+            put(3, "storage");
+            put(4, "out-west");
+            put(5, "out-east");
             put(6, "test-sensor");
-            put(7, "tv_room"); // TODO add battery
+            put(7, "tv_room");
             put(8, "living_room");
             put(9, "hallway_down");
             put(10, "sleeping_room");
             put(11, "kitchen");
             put(12, "mynthe_room");
             put(13, "noan_room");
+            put(14, "garage");
         }});
     }
 
