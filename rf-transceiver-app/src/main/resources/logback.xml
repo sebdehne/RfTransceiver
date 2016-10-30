@@ -5,8 +5,8 @@
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>logs/smarthome.%d{yyyy-MM-dd}.log</fileNamePattern>
 
-            <!-- keep 30 days' worth of history -->
-            <maxHistory>30</maxHistory>
+            <!-- keep 5 days' worth of history -->
+            <maxHistory>5</maxHistory>
         </rollingPolicy>
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -19,7 +19,7 @@
         </encoder>
     </appender>
 
-    <root level="trace">
+    <root level="INFO">
         <appender-ref ref="FILE"/>
     </root>
 </configuration>

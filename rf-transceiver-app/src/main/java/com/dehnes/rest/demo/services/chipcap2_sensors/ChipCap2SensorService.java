@@ -34,10 +34,10 @@ public class ChipCap2SensorService {
             put(5, "out-east");
             put(6, "test-sensor");
             put(7, "tv_room");
-            put(8, "living_room");
+            put(8, "bath_kids"); // was living_room
             put(9, "hallway_down");
             put(10, "sleeping_room");
-            put(11, "kitchen");
+            put(11, "under_floor"); // was kitchen
             put(12, "mynthe_room");
             put(13, "noan_room");
             put(14, "garage");
