@@ -15,15 +15,19 @@ public class CommandSender {
         this.serialConnection = serialConnection;
     }
 
-    public boolean sendValue(int rfAddr, int value) {
+    public boolean sendValue(int rfAddr, int value, boolean withRetries) {
         boolean result = false;
         try {
             result = sendValueNow(rfAddr, value);
-            Thread.sleep(100);
-            result = sendValueNow(rfAddr, value);
-            Thread.sleep(100);
-            result = sendValueNow(rfAddr, value);
-            Thread.sleep(100);
+
+            if (withRetries) {
+                Thread.sleep(100);
+                result = sendValueNow(rfAddr, value);
+                Thread.sleep(100);
+                result = sendValueNow(rfAddr, value);
+                Thread.sleep(100);
+            }
+
         } catch (Exception e) {
             LOGGER.error("", e);
         }

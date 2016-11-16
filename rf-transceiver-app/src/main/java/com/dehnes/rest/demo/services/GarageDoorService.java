@@ -83,11 +83,11 @@ public class GarageDoorService {
     }
 
     public boolean sendOpenCommand() {
-        return commandSender.sendValue(sender_id, 1);
+        return commandSender.sendValue(sender_id, 1, true);
     }
 
     public boolean sendCloseCommand() {
-        return commandSender.sendValue(sender_id, 2);
+        return commandSender.sendValue(sender_id, 2, true);
     }
 
     public Optional<StatusRecord> getCurrentState() {

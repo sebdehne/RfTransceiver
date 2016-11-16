@@ -1,20 +1,14 @@
 package com.dehnes.rest.demo;
 
-import java.util.List;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import com.dehnes.rest.demo.endpoints.ControlGarageDoorEndpoint;
-import com.dehnes.rest.demo.endpoints.GetGarageDoorEndpoint;
-import com.dehnes.rest.demo.endpoints.GetStorageFanSpeedEndpoint;
-import com.dehnes.rest.demo.endpoints.RedirectionEndpoint;
-import com.dehnes.rest.demo.endpoints.SetStorageFanSpeedEndpoint;
-import com.dehnes.rest.demo.endpoints.StaticFileFetcher;
+import com.dehnes.rest.demo.endpoints.*;
 import com.dehnes.rest.server.route.Route;
 import com.dehnes.rest.server.route.RouteBuilder;
 import com.dehnes.rest.server.route.RoutesFactory;
 import com.dehnes.rest.server.utils.Tuple;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 
 public class Routes implements RoutesFactory {
 
@@ -23,10 +17,10 @@ public class Routes implements RoutesFactory {
     public Routes(
             GetGarageDoorEndpoint getGarageDoorEndpoint,
             ControlGarageDoorEndpoint controlGarageDoorEndpoint,
-            GetStorageFanSpeedEndpoint getStorageFanSpeedEndpoint,
-            SetStorageFanSpeedEndpoint setStorageFanSpeedEndpoint,
             RedirectionEndpoint redirectionEndpoint,
-            StaticFileFetcher staticFileFetcher) {
+            StaticFileFetcher staticFileFetcher,
+            GetHeaterStatusEndpoint getHeaterStatusEndpoint,
+            HeaterControllerEndpoint heaterControllerEndpoint) {
 
         routes = new RouteBuilder()
 
@@ -39,10 +33,10 @@ public class Routes implements RoutesFactory {
                     .done()
                   .done()
 
-                  .when("/storage_fan")
-                    .get(getStorageFanSpeedEndpoint)
+                  .when("/heater")
+                    .get(getHeaterStatusEndpoint)
                     .when("/action")
-                      .post(setStorageFanSpeedEndpoint)
+                      .post(heaterControllerEndpoint)
                     .done()
                   .done()
 

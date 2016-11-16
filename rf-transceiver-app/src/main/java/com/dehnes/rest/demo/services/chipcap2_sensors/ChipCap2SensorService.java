@@ -93,14 +93,14 @@ public class ChipCap2SensorService {
     }
 
     private int calcVoltage(int adcValue) {
-        return ((102300 / adcValue) * 6 ) / 10;
+        return ((102300 / adcValue) * 6) / 10;
     }
 
-    private int getTemperature(SerialConnection.RfPacket packet) {
+    public static int getTemperature(SerialConnection.RfPacket packet) {
         return (int) ((((((float) ByteTools.merge(packet.getMessage()[3], packet.getMessage()[2])) / 16384F) * 165) - 40) * 100);
     }
 
-    private int getRelativeHumidity(SerialConnection.RfPacket packet) {
+    public static int getRelativeHumidity(SerialConnection.RfPacket packet) {
         return (int) ((((float) ByteTools.merge(packet.getMessage()[1], packet.getMessage()[0])) / 16384F) * 100 * 100);
     }
 }
