@@ -1,5 +1,6 @@
 package com.dehnes.rest.demo.services;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,6 +35,14 @@ public class PersistenceService {
     }
 
     private void load() {
+        File file = new File(filename);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         try (FileInputStream fis = new FileInputStream(filename)) {
             properties.load(fis);
         } catch (IOException e) {

@@ -1,0 +1,28 @@
+<button class="btn btn-link" ng-click="go('/')">Home</button>
+<h2>Heater under floor</h2>
+
+<ul class="list-unstyled">
+    <li>Status: {{target_heater_status}}</li>
+    <li>Operation mode: {{automatic_mode ? 'Automatic' : 'Manual'}}</li>
+    <li>Target temperature: {{target_temperature}} &#176;C</li>
+</ul>
+
+<div ng-if="automatic_mode == false">
+    <ul class="list-inline">
+        <button ng-click="switchOff()" class="btn btn-default">Switch off</button>
+        <button ng-click="switchOn()" class="btn btn-default">Switch on</button>
+        <button ng-click="switchToAutomatic()" class="btn btn-default">Automatic mode</button>
+    </ul>
+</div>
+
+<div ng-if="automatic_mode == true">
+    <form>
+        <label for="targetTemperatur">Target temperatur: </label>
+        <input id="targetTemperatur" ng-model="target_temperature_input"> &#176;C
+        <button ng-click="changeTargetTemperatur(target_temperature_input)" class="btn btn-default">Change</button>
+    </form>
+    <ul class="list-inline">
+        <button ng-click="switchToManual()" class="btn btn-default">Manual mode</button>
+    </ul>
+</div>
+

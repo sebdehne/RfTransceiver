@@ -19,9 +19,9 @@ angular.module('project', [
         controller: 'Garage',
         templateUrl: 'templates/garage.html'
       })
-      .when('/ventilation', {
-        controller: 'Ventilation',
-        templateUrl: 'templates/ventilation.html'
+      .when('/heater', {
+        controller: 'Heater',
+        templateUrl: 'templates/heater.html'
       })
       .otherwise({
         redirectTo: '/'

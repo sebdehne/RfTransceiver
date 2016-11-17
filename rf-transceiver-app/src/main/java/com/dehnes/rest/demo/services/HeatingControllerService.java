@@ -23,9 +23,10 @@ public class HeatingControllerService {
 
     private static final int COMMAND_READ_STATUS = 1;
     private static final int COMMAND_SWITCH_ON_HEATER = 2;
-    private static final int COMMAND_SWITCH_OFF_HEATER = 2;
+    private static final int COMMAND_SWITCH_OFF_HEATER = 3;
 
-    private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(10); // no need to switch more often
+    //private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(10); // no need to switch more often
+    private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(0); // no need to switch more often
 
     private static final int senderId = 27;
     private static final int maxRetries = 10;
@@ -81,22 +82,37 @@ public class HeatingControllerService {
     }
 
     private synchronized void tick() {
+        logger.debug("tick()");
+
         // request measurement
         SerialConnection.RfPacket rfPacket = sendWithRetries(COMMAND_READ_STATUS);
+        if (rfPacket == null) {
+            logger.warn("Did not receive anything from heater controller, giving up");
+            return;
+        }
+        logger.debug("got - " + rfPacket);
 
         // report measurements to influxDb, including operationMode and targetTemp
         Tuple<Integer, Boolean> tuple = reportValues(rfPacket);
 
         if (isInAutomaticMode()) {
+            logger.debug("Is in automatic mode");
             if ((lastSwitchedTimestamp + holdOffInMillis) < System.currentTimeMillis()) {
+                logger.debug("Evaluating target temperature now - " + getTargetTemperature());
                 if (tuple.a < getTargetTemperature()) {
+                    logger.debug("Setting heater to on");
                     persistenceService.set(HEATER_STATUS_KEY, "on");
                     lastSwitchedTimestamp = System.currentTimeMillis();
                 } else {
+                    logger.debug("Setting heater to off");
                     persistenceService.set(HEATER_STATUS_KEY, "off");
                     lastSwitchedTimestamp = System.currentTimeMillis();
                 }
+            } else {
+                logger.debug("Waiting for holdOff periode");
             }
+        } else {
+            logger.debug("Is not in automatic mode");
         }
 
         // bring the heater to the desired state
@@ -112,13 +128,35 @@ public class HeatingControllerService {
     }
 
     public synchronized void switchOn() {
+        logger.info("Switching heater on");
         persistenceService.set(HEATER_STATUS_KEY, "on");
         sendWithRetries(COMMAND_SWITCH_ON_HEATER);
     }
 
     public synchronized void switchOff() {
+        logger.info("Switching heater off");
         persistenceService.set(HEATER_STATUS_KEY, "off");
         sendWithRetries(COMMAND_SWITCH_OFF_HEATER);
+    }
+
+    public synchronized void setAutomaticMode(boolean automaticMode) {
+        persistenceService.set(AUTOMATIC_MODE_KEY, String.valueOf(automaticMode));
+        if (!automaticMode) {
+            switchOff();
+        } else {
+            tick();
+        }
+    }
+
+    public synchronized boolean isInAutomaticMode() {
+        return Boolean.parseBoolean(persistenceService.get(AUTOMATIC_MODE_KEY, String.valueOf(Boolean.TRUE)));
+    }
+
+    public synchronized void setTargetTemperature(int temperature) {
+        persistenceService.set(TARGET_TEMP_KEY, String.valueOf(temperature));
+        if (isInAutomaticMode()) {
+            tick();
+        }
     }
 
     private SerialConnection.RfPacket sendWithRetries(int command) {
@@ -128,7 +166,7 @@ public class HeatingControllerService {
 
             SerialConnection.RfPacket packet = null;
             try {
-                packet = received.poll(2, TimeUnit.SECONDS);
+                packet = received.poll(500, TimeUnit.MILLISECONDS);
             } catch (Exception ignored) {
             }
 
@@ -140,18 +178,6 @@ public class HeatingControllerService {
 
         }
         return null;
-    }
-
-    public synchronized void setAutomaticMode(boolean automaticMode) {
-        persistenceService.set(AUTOMATIC_MODE_KEY, String.valueOf(automaticMode));
-    }
-
-    public synchronized boolean isInAutomaticMode() {
-        return Boolean.parseBoolean(persistenceService.get(AUTOMATIC_MODE_KEY, String.valueOf(Boolean.TRUE)));
-    }
-
-    public synchronized void setTargetTemperature(int temperature) {
-        persistenceService.set(TARGET_TEMP_KEY, String.valueOf(temperature));
     }
 
     public synchronized int getTargetTemperature() {
