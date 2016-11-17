@@ -25,8 +25,8 @@ public class HeatingControllerService {
     private static final int COMMAND_SWITCH_ON_HEATER = 2;
     private static final int COMMAND_SWITCH_OFF_HEATER = 3;
 
-    //private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(10); // no need to switch more often
-    private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(0); // no need to switch more often
+    private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(10); // no need to switch more often
+    //private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(0); // no need to switch more often
 
     private static final int senderId = 27;
     private static final int maxRetries = 10;
