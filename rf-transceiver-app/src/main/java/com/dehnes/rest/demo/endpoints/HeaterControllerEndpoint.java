@@ -24,26 +24,27 @@ public class HeaterControllerEndpoint extends AbstractRestHandler {
             JSONObject body,
             BiConsumer<Integer, Object> onDone) {
 
+        boolean result;
         Action a = Action.valueOf(body.getString("action"));
         switch (a) {
             case set_target_temperature:
-                heatingControllerService.setTargetTemperature(body.getInt("value"));
+                result = heatingControllerService.setTargetTemperature(body.getInt("value"));
                 break;
             case switch_automatic:
-                heatingControllerService.setAutomaticMode(body.getBoolean("value"));
+                result = heatingControllerService.setAutomaticMode(body.getBoolean("value"));
                 break;
             case switch_heater:
                 if (body.getBoolean("value")) {
-                    heatingControllerService.switchOn();
+                    result = heatingControllerService.switchOn();
                 } else {
-                    heatingControllerService.switchOff();
+                    result = heatingControllerService.switchOff();
                 }
                 break;
             default:
                 throw new RuntimeException("Do not know action " + a);
         }
 
-        onDone.accept(200, null);
+        onDone.accept(result ? 200 : 500, null);
 
     }
 

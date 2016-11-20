@@ -1,4 +1,4 @@
-package com.dehnes.rest.demo.services.chipcap2_sensors;
+package com.dehnes.rest.demo.services;
 
 import com.dehnes.rest.demo.clients.influxdb.InfluxDBConnector;
 import com.dehnes.rest.demo.clients.serial.SerialConnection;

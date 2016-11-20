@@ -1,6 +1,6 @@
 package com.dehnes.rest.demo;
 
-import com.dehnes.rest.demo.services.chipcap2_sensors.ChipCap2SensorService;
+import com.dehnes.rest.demo.services.ChipCap2SensorService;
 import com.dehnes.rest.server.EmbeddedJetty;
 import com.dehnes.rest.server.config.AppContext;
 import org.eclipse.jetty.server.Server;

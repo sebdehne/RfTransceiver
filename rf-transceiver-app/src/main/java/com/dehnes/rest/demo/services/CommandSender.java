@@ -31,6 +31,7 @@ public class CommandSender {
         } catch (Exception e) {
             LOGGER.error("", e);
         }
+        LOGGER.info("Send result " + result + " of command " + value + " to addr: " + rfAddr);
         return result;
     }
 

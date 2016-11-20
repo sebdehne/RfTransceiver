@@ -2,7 +2,6 @@ package com.dehnes.rest.demo.services;
 
 import com.dehnes.rest.demo.clients.influxdb.InfluxDBConnector;
 import com.dehnes.rest.demo.clients.serial.SerialConnection;
-import com.dehnes.rest.demo.services.chipcap2_sensors.ChipCap2SensorService;
 import com.dehnes.rest.demo.utils.MathTools;
 import com.dehnes.rest.demo.utils.Tuple;
 import org.slf4j.Logger;
@@ -81,14 +80,14 @@ public class HeatingControllerService {
         serialConnection.unregisterListener(this::handleIncoming);
     }
 
-    private synchronized void tick() {
+    private synchronized boolean tick() {
         logger.debug("tick()");
 
         // request measurement
         SerialConnection.RfPacket rfPacket = sendWithRetries(COMMAND_READ_STATUS);
         if (rfPacket == null) {
             logger.warn("Did not receive anything from heater controller, giving up");
-            return;
+            return false;
         }
         logger.debug("got - " + rfPacket);
 
@@ -117,34 +116,35 @@ public class HeatingControllerService {
 
         // bring the heater to the desired state
         if (tuple.b && "off".equals(getConfiguredHeaterTarget())) {
-            switchOff();
+            return switchOff();
         } else if (!tuple.b && "on".equals(getConfiguredHeaterTarget())) {
-            switchOn();
+            return switchOn();
         }
+        return true;
     }
 
     public synchronized String getConfiguredHeaterTarget() {
         return persistenceService.get(HEATER_STATUS_KEY, "off");
     }
 
-    public synchronized void switchOn() {
+    public synchronized boolean switchOn() {
         logger.info("Switching heater on");
         persistenceService.set(HEATER_STATUS_KEY, "on");
-        sendWithRetries(COMMAND_SWITCH_ON_HEATER);
+        return sendWithRetries(COMMAND_SWITCH_ON_HEATER) != null;
     }
 
-    public synchronized void switchOff() {
+    public synchronized boolean switchOff() {
         logger.info("Switching heater off");
         persistenceService.set(HEATER_STATUS_KEY, "off");
-        sendWithRetries(COMMAND_SWITCH_OFF_HEATER);
+        return sendWithRetries(COMMAND_SWITCH_OFF_HEATER) != null;
     }
 
-    public synchronized void setAutomaticMode(boolean automaticMode) {
+    public synchronized boolean setAutomaticMode(boolean automaticMode) {
         persistenceService.set(AUTOMATIC_MODE_KEY, String.valueOf(automaticMode));
         if (!automaticMode) {
-            switchOff();
+            return switchOff();
         } else {
-            tick();
+            return tick();
         }
     }
 
@@ -152,21 +152,20 @@ public class HeatingControllerService {
         return Boolean.parseBoolean(persistenceService.get(AUTOMATIC_MODE_KEY, String.valueOf(Boolean.TRUE)));
     }
 
-    public synchronized void setTargetTemperature(int temperature) {
+    public synchronized boolean setTargetTemperature(int temperature) {
         persistenceService.set(TARGET_TEMP_KEY, String.valueOf(temperature));
-        if (isInAutomaticMode()) {
-            tick();
-        }
+        return !isInAutomaticMode() || tick();
     }
 
     private SerialConnection.RfPacket sendWithRetries(int command) {
+        received.clear();
         int retryCounter = 0;
         while (retryCounter < maxRetries) {
             commandSender.sendValue(senderId, command, false);
 
             SerialConnection.RfPacket packet = null;
             try {
-                packet = received.poll(500, TimeUnit.MILLISECONDS);
+                packet = received.poll(1, TimeUnit.SECONDS);
             } catch (Exception ignored) {
             }
 
@@ -177,6 +176,7 @@ public class HeatingControllerService {
             retryCounter++;
 
         }
+        logger.warn("Giving up sending command " + command + " to heater controller");
         return null;
     }
 
@@ -195,9 +195,9 @@ public class HeatingControllerService {
     }
 
     private Tuple<Integer, Boolean> reportValues(SerialConnection.RfPacket p) {
-        int temperature = ChipCap2SensorService.getTemperature(p);
+        int temperature = Sht15SensorService.getTemperature(p);
         String temp = MathTools.divideBy100(temperature);
-        String humidity = MathTools.divideBy100(ChipCap2SensorService.getRelativeHumidity(p));
+        String humidity = MathTools.divideBy100(Sht15SensorService.getRelativeHumidity(p, temperature));
         boolean heaterStatus = p.getMessage()[4] == 1;
 
         logger.info("Relative humidity " + humidity);

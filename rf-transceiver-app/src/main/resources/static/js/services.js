@@ -51,7 +51,11 @@ angular.module('project.services', [])
                     .error(function (data, status, headers, config) {
                         $('#workingMsg').hide();
                         if (errorStr) {
-                            ErrorService.show(errorStr + ': ' + data.response);
+                            if (data) {
+                                ErrorService.show(errorStr + ': ' + data.response);
+                            } else {
+                                ErrorService.show(errorStr);
+                            }
                         }
                         if (errorFn) {
                             errorFn(data, status, headers, config);
@@ -89,7 +93,7 @@ angular.module('project.services', [])
             postAction: function (action, value, fn) {
                 HttpWrapper.handleResult(
                     $http.post('/api/heater/action', {action: action, value: value}),
-                    'Could not send level',
+                    'Could not send ',
                     fn);
             }
         };
