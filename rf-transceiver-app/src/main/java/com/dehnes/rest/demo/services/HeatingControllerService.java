@@ -24,7 +24,7 @@ public class HeatingControllerService {
     private static final int COMMAND_SWITCH_ON_HEATER = 2;
     private static final int COMMAND_SWITCH_OFF_HEATER = 3;
 
-    private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(10); // no need to switch more often
+    private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(5); // no need to switch more often
     //private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(0); // no need to switch more often
 
     private static final int senderId = 27;
@@ -83,6 +83,8 @@ public class HeatingControllerService {
     private synchronized boolean tick() {
         logger.debug("tick()");
 
+        adjustTargetTemperature();
+
         // request measurement
         SerialConnection.RfPacket rfPacket = sendWithRetries(COMMAND_READ_STATUS);
         if (rfPacket == null) {
@@ -123,6 +125,46 @@ public class HeatingControllerService {
         return true;
     }
 
+    private void adjustTargetTemperature() {
+
+        Optional<Integer> west = getTemp("out-west");
+        Optional<Integer> east = getTemp("out-east");
+
+        int currentTemp;
+        if (west.isPresent() && east.isPresent()) {
+            currentTemp = Math.min(west.get(), east.get());
+        } else if (west.isPresent()) {
+            currentTemp = west.get();
+        } else if (east.isPresent()) {
+            currentTemp = east.get();
+        } else {
+            logger.warn("Forced to give up adjusting target temp, no outside temp available");
+            return;
+        }
+
+        // calc
+        final float factor = -1F;
+        int targetTemp = (int) (((float) currentTemp) * factor + 3000);
+        logger.info("Current coldest outside is " + currentTemp);
+        logger.info("Adjusting to " + targetTemp);
+        setTargetTemperatureInternal(targetTemp);
+    }
+
+    private Optional<Integer> getTemp(String room) {
+        try {
+            return Optional.of((int) (influxDBConnector.avgTempDuringLastHour(room)
+                    .getJSONArray("results")
+                    .getJSONObject(0)
+                    .getJSONArray("series")
+                    .optJSONObject(0)
+                    .getJSONArray("values")
+                    .getJSONArray(0)
+                    .getDouble(1) * 100));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
     public synchronized String getConfiguredHeaterTarget() {
         return persistenceService.get(HEATER_STATUS_KEY, "off");
     }
@@ -153,8 +195,12 @@ public class HeatingControllerService {
     }
 
     public synchronized boolean setTargetTemperature(int temperature) {
-        persistenceService.set(TARGET_TEMP_KEY, String.valueOf(temperature));
+        setTargetTemperatureInternal(temperature);
         return !isInAutomaticMode() || tick();
+    }
+
+    public synchronized void setTargetTemperatureInternal(int temperature) {
+        persistenceService.set(TARGET_TEMP_KEY, String.valueOf(temperature));
     }
 
     private SerialConnection.RfPacket sendWithRetries(int command) {

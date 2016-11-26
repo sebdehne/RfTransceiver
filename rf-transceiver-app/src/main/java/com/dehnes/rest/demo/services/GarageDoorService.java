@@ -92,7 +92,7 @@ public class GarageDoorService {
 
     public Optional<StatusRecord> getCurrentState() {
         long min = System.currentTimeMillis() - (3600 * 1000); // 60min back in time
-        JSONObject json = influxDBConnector.queryRaw(dbType, Optional.<InfluxDBConnector.KeyValue>empty(), Optional.of(min), Optional.<Long>empty(), 1);
+        JSONObject json = influxDBConnector.queryRaw(dbType, Optional.empty(), Optional.of(min), Optional.empty(), 1);
         JSONArray results = json.optJSONArray("results");
         if (results != null && results.length() > 0) {
             JSONObject result = results.getJSONObject(0);

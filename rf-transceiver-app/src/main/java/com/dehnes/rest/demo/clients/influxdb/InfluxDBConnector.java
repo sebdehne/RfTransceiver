@@ -133,4 +133,17 @@ public class InfluxDBConnector {
         }
     }
 
+    public JSONObject avgTempDuringLastHour(String room) {
+        try {
+            URIBuilder b = new URIBuilder(baseUrl + "/query");
+            b.addParameter("db", dbName);
+            b.addParameter("q", "SELECT mean(temperature) from sensor where room = '" + room + "' and time > " + (System.currentTimeMillis() - (3600 * 1000)) / 1000 + "s");
+
+            Response execute = Request.Get(b.build()).execute();
+            return new JSONObject(execute.returnContent().asString());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }
