@@ -24,7 +24,7 @@ public class HeatingControllerService {
     private static final int COMMAND_SWITCH_ON_HEATER = 2;
     private static final int COMMAND_SWITCH_OFF_HEATER = 3;
 
-    private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(5); // no need to switch more often
+    private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(10); // no need to switch more often
     //private static final long holdOffInMillis = TimeUnit.MINUTES.toMillis(0); // no need to switch more often
 
     private static final int senderId = 27;
@@ -143,8 +143,11 @@ public class HeatingControllerService {
         }
 
         // calc
-        final float factor = -1F;
+        final float factor = -1.5F;
         int targetTemp = (int) (((float) currentTemp) * factor + 3000);
+        // limit by max values 0,40
+        targetTemp = Math.min(targetTemp, 4000);
+        targetTemp = Math.max(targetTemp, 0);
         logger.info("Current coldest outside is " + currentTemp);
         logger.info("Adjusting to " + targetTemp);
         setTargetTemperatureInternal(targetTemp);
