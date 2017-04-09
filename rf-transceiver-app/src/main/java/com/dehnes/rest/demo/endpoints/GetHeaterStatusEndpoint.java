@@ -25,7 +25,7 @@ public class GetHeaterStatusEndpoint extends AbstractRestHandler {
             BiConsumer<Integer, Object> onDone) {
 
         JSONObject result = new JSONObject();
-        result.put("automatic_mode", heatingControllerService.isInAutomaticMode());
+        result.put("mode", heatingControllerService.getCurrentMode());
         result.put("target_temperature", heatingControllerService.getTargetTemperature());
         result.put("target_heater_status", heatingControllerService.getConfiguredHeaterTarget());
 

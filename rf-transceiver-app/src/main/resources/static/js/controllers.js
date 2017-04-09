@@ -252,7 +252,7 @@ angular.module('project.controllers', [])
 
         $scope.refresh = function () {
             HeaterService.getStatus(function (status) {
-                $scope.automatic_mode = status['automatic_mode'];
+                $scope.mode = status['mode'];
                 $scope.target_temperature = $scope.tempToString(status['target_temperature']);
                 $scope.target_heater_status = status['target_heater_status'];
                 $scope.target_temperature_input = $scope.target_temperature;
@@ -260,8 +260,8 @@ angular.module('project.controllers', [])
         };
         $scope.refresh();
 
-        $scope.changeTargetTemperatur = function (value) {
-            HeaterService.postAction('set_target_temperature', $scope.stringToTemp(value), function () {
+        $scope.switchToManual = function (value) {
+            HeaterService.postAction('switch_manual', $scope.stringToTemp(value), function () {
                 $scope.refresh();
             });
         };
@@ -272,20 +272,14 @@ angular.module('project.controllers', [])
             });
         };
 
-        $scope.switchToManual = function () {
-            HeaterService.postAction('switch_automatic', false, function () {
-                $scope.refresh();
-            });
-        };
-
         $scope.switchOff = function () {
-            HeaterService.postAction('switch_heater', false, function () {
+            HeaterService.postAction('switch_off', false, function () {
                 $scope.refresh();
             });
         };
 
         $scope.switchOn = function () {
-            HeaterService.postAction('switch_heater', true, function () {
+            HeaterService.postAction('switch_on', true, function () {
                 $scope.refresh();
             });
         };

@@ -61,7 +61,8 @@ public class ChipCap2SensorService {
             return false;
         }
 
-        String temp = MathTools.divideBy100(getTemperature(p));
+        int tempValue = getTemperature(p);
+        String temp = MathTools.divideBy100(tempValue);
         String humidity = MathTools.divideBy100(getRelativeHumidity(p));
         String light = String.valueOf(getAdcValue(p, 4));
         String batteryVolt = MathTools.divideBy100(calcVoltage(getAdcValue(p, 6)));
@@ -73,16 +74,19 @@ public class ChipCap2SensorService {
         logger.info("Counter " + counter);
         logger.info("Battery " + batteryVolt);
 
-        // record received data in db
-        influxDBConnector.recordSensorData(
-                sensorRepo.get(p.getRemoteAddr()),
-                Optional.of(temp),
-                Optional.of(humidity),
-                Optional.of(counter),
-                Optional.of(light),
-                Optional.of(batteryVolt)
-        );
-
+        if (tempValue > -4000 && tempValue < 8000) {
+            // record received data in db
+            influxDBConnector.recordSensorData(
+                    sensorRepo.get(p.getRemoteAddr()),
+                    Optional.of(temp),
+                    Optional.of(humidity),
+                    Optional.of(counter),
+                    Optional.of(light),
+                    Optional.of(batteryVolt)
+            );
+        } else {
+            logger.info("Ignoring abnormal values");
+        }
         return true;
     }
 

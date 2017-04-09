@@ -27,18 +27,17 @@ public class HeaterControllerEndpoint extends AbstractRestHandler {
         boolean result;
         Action a = Action.valueOf(body.getString("action"));
         switch (a) {
-            case set_target_temperature:
-                result = heatingControllerService.setTargetTemperature(body.getInt("value"));
+            case switch_manual:
+                result = heatingControllerService.manualMode(body.getInt("value"));
                 break;
             case switch_automatic:
-                result = heatingControllerService.setAutomaticMode(body.getBoolean("value"));
+                result = heatingControllerService.automaticMode();
                 break;
-            case switch_heater:
-                if (body.getBoolean("value")) {
-                    result = heatingControllerService.switchOn();
-                } else {
-                    result = heatingControllerService.switchOff();
-                }
+            case switch_on:
+                result = heatingControllerService.switchOn();
+                break;
+            case switch_off:
+                result = heatingControllerService.switchOff();
                 break;
             default:
                 throw new RuntimeException("Do not know action " + a);
@@ -50,7 +49,8 @@ public class HeaterControllerEndpoint extends AbstractRestHandler {
 
     private enum Action {
         switch_automatic,
-        switch_heater,
-        set_target_temperature
+        switch_manual,
+        switch_on,
+        switch_off
     }
 }

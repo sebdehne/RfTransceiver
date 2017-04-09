@@ -3,26 +3,48 @@
 
 <ul class="list-unstyled">
     <li>Status: {{target_heater_status}}</li>
-    <li>Operation mode: {{automatic_mode ? 'Automatic' : 'Manual'}}</li>
-    <li>Target temperature: {{target_temperature}} &#176;C</li>
+    <li>Operation mode: {{mode}}</li>
 </ul>
 
-<div ng-if="automatic_mode == false">
+<div ng-if="mode == 'ON'">
     <ul class="list-inline">
         <button ng-click="switchOff()" class="btn btn-default">Switch off</button>
+        <button ng-click="switchToAutomatic()" class="btn btn-default">Automatic mode</button>
+        <button ng-click="switchToManual(20)" class="btn btn-default">Manual mode</button>
+    </ul>
+</div>
+<div ng-if="mode == 'OFF'">
+    <ul class="list-inline">
         <button ng-click="switchOn()" class="btn btn-default">Switch on</button>
         <button ng-click="switchToAutomatic()" class="btn btn-default">Automatic mode</button>
+        <button ng-click="switchToManual(20)" class="btn btn-default">Manual mode</button>
     </ul>
 </div>
 
-<div ng-if="automatic_mode == true">
+<div ng-if="mode == 'AUTOMATIC'">
+    <ul class="list-unstyled">
+        <li>Target temperature: {{target_temperature}} &#176;C</li>
+    </ul>
+    <ul class="list-inline">
+        <button ng-click="switchOn()" class="btn btn-default">Switch on</button>
+        <button ng-click="switchOff()" class="btn btn-default">Switch off</button>
+        <button ng-click="switchToManual(20)" class="btn btn-default">Manual mode</button>
+    </ul>
+</div>
+
+<div ng-if="mode == 'MANUAL'">
+    <ul class="list-unstyled">
+        <li>Target temperature: {{target_temperature}} &#176;C</li>
+    </ul>
     <form>
         <label for="targetTemperatur">Target temperatur: </label>
         <input id="targetTemperatur" ng-model="target_temperature_input"> &#176;C
-        <button ng-click="changeTargetTemperatur(target_temperature_input)" class="btn btn-default">Change</button>
+        <button ng-click="switchToManual(target_temperature_input)" class="btn btn-default">Change</button>
     </form>
     <ul class="list-inline">
-        <button ng-click="switchToManual()" class="btn btn-default">Manual mode</button>
+        <button ng-click="switchOn()" class="btn btn-default">Switch on</button>
+        <button ng-click="switchOff()" class="btn btn-default">Switch off</button>
+        <button ng-click="switchToAutomatic()" class="btn btn-default">Automatic mode</button>
     </ul>
 </div>
 

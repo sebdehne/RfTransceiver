@@ -17,8 +17,8 @@ import java.util.concurrent.*;
 public class HeatingControllerService {
     private static final Logger logger = LoggerFactory.getLogger(HeatingControllerService.class);
     private static final String TARGET_TEMP_KEY = "HeatingControllerService.targetTemp";
-    private static final String AUTOMATIC_MODE_KEY = "HeatingControllerService.automaticMode";
     private static final String HEATER_STATUS_KEY = "HeatingControllerService.heaterTarget";
+    private static final String OPERATING_MODE = "HeatingControllerService.operatingMode";
 
     private static final int COMMAND_READ_STATUS = 1;
     private static final int COMMAND_SWITCH_ON_HEATER = 2;
@@ -80,10 +80,58 @@ public class HeatingControllerService {
         serialConnection.unregisterListener(this::handleIncoming);
     }
 
+    public synchronized String getConfiguredHeaterTarget() {
+        return persistenceService.get(HEATER_STATUS_KEY, "off");
+    }
+
+    public synchronized boolean switchOn() {
+        logger.info("Moving to permanent mode: on");
+        persistenceService.set(OPERATING_MODE, Mode.ON.name());
+        return tick();
+    }
+
+    public synchronized boolean switchOff() {
+        logger.info("Moving to permanent mode: off");
+        persistenceService.set(OPERATING_MODE, Mode.OFF.name());
+        return tick();
+    }
+
+    public synchronized boolean manualMode(int targetTemp) {
+        logger.info("Moving to mode: manual (target: " + MathTools.divideBy100(targetTemp) + ")");
+        lastSwitchedTimestamp = 0;
+        persistenceService.set(OPERATING_MODE, Mode.MANUAL.name());
+        persistenceService.set(TARGET_TEMP_KEY, String.valueOf(targetTemp));
+        return tick();
+    }
+
+    public synchronized boolean automaticMode() {
+        logger.info("Moving to mode: automatic");
+        lastSwitchedTimestamp = 0;
+        persistenceService.set(OPERATING_MODE, Mode.AUTOMATIC.name());
+        return tick();
+    }
+
+    public synchronized Mode getCurrentMode() {
+        return Mode.valueOf(persistenceService.get(OPERATING_MODE, Mode.AUTOMATIC.name()));
+    }
+
+    public synchronized int getTargetTemperature() {
+        return Integer.valueOf(persistenceService.get(TARGET_TEMP_KEY, String.valueOf(25 * 100)));
+    }
+
+    private void setTargetTemperatureInternal(int targetTemp) {
+        persistenceService.set(TARGET_TEMP_KEY, String.valueOf(targetTemp));
+    }
+
     private synchronized boolean tick() {
         logger.debug("tick()");
 
-        adjustTargetTemperature();
+        Mode currentMode = getCurrentMode();
+        logger.info("Current mode: " + currentMode);
+
+        if (currentMode == Mode.AUTOMATIC) {
+            adjustTargetTemperature();
+        }
 
         // request measurement
         SerialConnection.RfPacket rfPacket = sendWithRetries(COMMAND_READ_STATUS);
@@ -94,13 +142,18 @@ public class HeatingControllerService {
         logger.debug("got - " + rfPacket);
 
         // report measurements to influxDb, including operationMode and targetTemp
-        Tuple<Integer, Boolean> tuple = reportValues(rfPacket);
+        Tuple<Integer, Boolean> tuple = reportValues(rfPacket, currentMode);
+        if (tuple == null) {
+            return false;
+        }
 
-        if (isInAutomaticMode()) {
-            logger.debug("Is in automatic mode");
-            if ((lastSwitchedTimestamp + holdOffInMillis) < System.currentTimeMillis()) {
-                logger.debug("Evaluating target temperature now - " + getTargetTemperature());
-                if (tuple.a < getTargetTemperature()) {
+        if (currentMode == Mode.AUTOMATIC || currentMode == Mode.MANUAL) {
+            if ((lastSwitchedTimestamp + holdOffInMillis) >= System.currentTimeMillis()) {
+                logger.debug("Waiting for holdOff periode");
+            } else {
+                int targetTemperature = getTargetTemperature();
+                logger.debug("Evaluating target temperature now - " + targetTemperature);
+                if (tuple.a < targetTemperature) {
                     logger.debug("Setting heater to on");
                     persistenceService.set(HEATER_STATUS_KEY, "on");
                     lastSwitchedTimestamp = System.currentTimeMillis();
@@ -109,18 +162,18 @@ public class HeatingControllerService {
                     persistenceService.set(HEATER_STATUS_KEY, "off");
                     lastSwitchedTimestamp = System.currentTimeMillis();
                 }
-            } else {
-                logger.debug("Waiting for holdOff periode");
             }
-        } else {
-            logger.debug("Is not in automatic mode");
+        } else if (currentMode == Mode.OFF) {
+            persistenceService.set(HEATER_STATUS_KEY, "off");
+        } else if (currentMode == Mode.ON) {
+            persistenceService.set(HEATER_STATUS_KEY, "on");
         }
 
         // bring the heater to the desired state
         if (tuple.b && "off".equals(getConfiguredHeaterTarget())) {
-            return switchOff();
+            return sendWithRetries(COMMAND_SWITCH_OFF_HEATER) != null;
         } else if (!tuple.b && "on".equals(getConfiguredHeaterTarget())) {
-            return switchOn();
+            return sendWithRetries(COMMAND_SWITCH_ON_HEATER) != null;
         }
         return true;
     }
@@ -143,13 +196,13 @@ public class HeatingControllerService {
         }
 
         // calc
-        final float factor = -1.5F;
-        int targetTemp = (int) (((float) currentTemp) * factor + 3000);
-        // limit by max values 0,40
-        targetTemp = Math.min(targetTemp, 4000);
+        final float factor = -1.2F;
+        int targetTemp = (int) (((float) currentTemp) * factor + 4000);
+        // limit by max values 22,45
+        targetTemp = Math.min(targetTemp, 4500);
         targetTemp = Math.max(targetTemp, 0);
         logger.info("Current coldest outside is " + currentTemp);
-        logger.info("Adjusting to " + targetTemp);
+        logger.info("Adjusting target to " + targetTemp);
         setTargetTemperatureInternal(targetTemp);
     }
 
@@ -166,44 +219,6 @@ public class HeatingControllerService {
         } catch (Exception e) {
             return Optional.empty();
         }
-    }
-
-    public synchronized String getConfiguredHeaterTarget() {
-        return persistenceService.get(HEATER_STATUS_KEY, "off");
-    }
-
-    public synchronized boolean switchOn() {
-        logger.info("Switching heater on");
-        persistenceService.set(HEATER_STATUS_KEY, "on");
-        return sendWithRetries(COMMAND_SWITCH_ON_HEATER) != null;
-    }
-
-    public synchronized boolean switchOff() {
-        logger.info("Switching heater off");
-        persistenceService.set(HEATER_STATUS_KEY, "off");
-        return sendWithRetries(COMMAND_SWITCH_OFF_HEATER) != null;
-    }
-
-    public synchronized boolean setAutomaticMode(boolean automaticMode) {
-        persistenceService.set(AUTOMATIC_MODE_KEY, String.valueOf(automaticMode));
-        if (!automaticMode) {
-            return switchOff();
-        } else {
-            return tick();
-        }
-    }
-
-    public synchronized boolean isInAutomaticMode() {
-        return Boolean.parseBoolean(persistenceService.get(AUTOMATIC_MODE_KEY, String.valueOf(Boolean.TRUE)));
-    }
-
-    public synchronized boolean setTargetTemperature(int temperature) {
-        setTargetTemperatureInternal(temperature);
-        return !isInAutomaticMode() || tick();
-    }
-
-    public synchronized void setTargetTemperatureInternal(int temperature) {
-        persistenceService.set(TARGET_TEMP_KEY, String.valueOf(temperature));
     }
 
     private SerialConnection.RfPacket sendWithRetries(int command) {
@@ -229,10 +244,6 @@ public class HeatingControllerService {
         return null;
     }
 
-    public synchronized int getTargetTemperature() {
-        return Integer.valueOf(persistenceService.get(TARGET_TEMP_KEY, String.valueOf(25 * 100)));
-    }
-
     private boolean handleIncoming(SerialConnection.RfPacket p) {
         if (p.getRemoteAddr() != senderId) {
             return false;
@@ -243,7 +254,7 @@ public class HeatingControllerService {
         return true;
     }
 
-    private Tuple<Integer, Boolean> reportValues(SerialConnection.RfPacket p) {
+    private Tuple<Integer, Boolean> reportValues(SerialConnection.RfPacket p, Mode currentMode) {
         int temperature = Sht15SensorService.getTemperature(p);
         String temp = MathTools.divideBy100(temperature);
         String humidity = MathTools.divideBy100(Sht15SensorService.getRelativeHumidity(p, temperature));
@@ -253,6 +264,11 @@ public class HeatingControllerService {
         logger.info("Temperature " + temp);
         logger.info("Heater on? " + heaterStatus);
 
+        if (temperature < -4000 || temperature > 8000) {
+            logger.info("Ignoring abnormal values");
+            return null;
+        }
+
         influxDBConnector.recordSensorData(
                 "sensor",
                 Optional.of(new InfluxDBConnector.KeyValue("room", "heating_controller")),
@@ -260,13 +276,21 @@ public class HeatingControllerService {
                         new InfluxDBConnector.KeyValue("temperature", temp),
                         new InfluxDBConnector.KeyValue("humidity", humidity),
                         new InfluxDBConnector.KeyValue("heater_status", String.valueOf((heaterStatus ? 1 : 0))),
-                        new InfluxDBConnector.KeyValue("automatic_mode", String.valueOf(isInAutomaticMode() ? 1 : 0)),
+                        new InfluxDBConnector.KeyValue("automatic_mode", String.valueOf(currentMode == Mode.AUTOMATIC ? 1 : 0)),
+                        new InfluxDBConnector.KeyValue("manual_mode", String.valueOf(currentMode == Mode.MANUAL ? 1 : 0)),
                         new InfluxDBConnector.KeyValue("target_temperature", String.valueOf(MathTools.divideBy100(getTargetTemperature()))),
                         new InfluxDBConnector.KeyValue("configured_heater_target", String.valueOf(getConfiguredHeaterTarget().equals("on") ? 1 : 0))
                 )
         );
 
         return new Tuple<>(temperature, heaterStatus);
+    }
+
+    public enum Mode {
+        ON,
+        OFF,
+        AUTOMATIC,
+        MANUAL
     }
 
 }
