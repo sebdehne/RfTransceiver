@@ -138,15 +138,11 @@ public class HeatingControllerService {
 
         // request measurement
         SerialConnection.RfPacket rfPacket = sendWithRetries(COMMAND_READ_STATUS);
-        if (rfPacket == null) {
-            logger.warn("Did not receive anything from heater controller, giving up");
-            return false;
-        }
         logger.debug("got - " + rfPacket);
-
         // report measurements to influxDb, including operationMode and targetTemp
         Tuple<Integer, Boolean> tuple = reportValues(rfPacket, currentMode, failedAttempts.get());
         if (tuple == null) {
+            logger.warn("Did not receive anything from heater controller, giving up");
             return false;
         }
 
@@ -264,27 +260,41 @@ public class HeatingControllerService {
     }
 
     private Tuple<Integer, Boolean> reportValues(SerialConnection.RfPacket p, Mode currentMode, int failedAttempts) {
-        int temperature = Sht15SensorService.getTemperature(p);
-        String temp = MathTools.divideBy100(temperature);
-        String humidity = MathTools.divideBy100(Sht15SensorService.getRelativeHumidity(p, temperature));
-        boolean heaterStatus = p.getMessage()[4] == 1;
+        if (p != null) {
+            int temperature = Sht15SensorService.getTemperature(p);
+            String temp = MathTools.divideBy100(temperature);
+            String humidity = MathTools.divideBy100(Sht15SensorService.getRelativeHumidity(p, temperature));
+            boolean heaterStatus = p.getMessage()[4] == 1;
 
-        logger.info("Relative humidity " + humidity);
-        logger.info("Temperature " + temp);
-        logger.info("Heater on? " + heaterStatus);
+            logger.info("Relative humidity " + humidity);
+            logger.info("Temperature " + temp);
+            logger.info("Heater on? " + heaterStatus);
 
-        if (temperature < -4000 || temperature > 8000) {
-            logger.info("Ignoring abnormal values");
-            return null;
+            if (temperature >= -4000 && temperature <= 8000) {
+                influxDBConnector.recordSensorData(
+                        "sensor",
+                        Optional.of(new InfluxDBConnector.KeyValue("room", "heating_controller")),
+                        Arrays.asList(
+                                new InfluxDBConnector.KeyValue("temperature", temp),
+                                new InfluxDBConnector.KeyValue("humidity", humidity),
+                                new InfluxDBConnector.KeyValue("heater_status", String.valueOf((heaterStatus ? 1 : 0))),
+                                new InfluxDBConnector.KeyValue("automatic_mode", String.valueOf(currentMode == Mode.AUTOMATIC ? 1 : 0)),
+                                new InfluxDBConnector.KeyValue("manual_mode", String.valueOf(currentMode == Mode.MANUAL ? 1 : 0)),
+                                new InfluxDBConnector.KeyValue("target_temperature", String.valueOf(MathTools.divideBy100(getTargetTemperature()))),
+                                new InfluxDBConnector.KeyValue("configured_heater_target", String.valueOf(getConfiguredHeaterTarget().equals("on") ? 1 : 0)),
+                                new InfluxDBConnector.KeyValue("failed_attempts", String.valueOf(failedAttempts))
+                        )
+                );
+                return new Tuple<>(temperature, heaterStatus);
+            } else {
+                logger.info("Ignoring abnormal values " + temperature);
+            }
         }
 
         influxDBConnector.recordSensorData(
                 "sensor",
                 Optional.of(new InfluxDBConnector.KeyValue("room", "heating_controller")),
                 Arrays.asList(
-                        new InfluxDBConnector.KeyValue("temperature", temp),
-                        new InfluxDBConnector.KeyValue("humidity", humidity),
-                        new InfluxDBConnector.KeyValue("heater_status", String.valueOf((heaterStatus ? 1 : 0))),
                         new InfluxDBConnector.KeyValue("automatic_mode", String.valueOf(currentMode == Mode.AUTOMATIC ? 1 : 0)),
                         new InfluxDBConnector.KeyValue("manual_mode", String.valueOf(currentMode == Mode.MANUAL ? 1 : 0)),
                         new InfluxDBConnector.KeyValue("target_temperature", String.valueOf(MathTools.divideBy100(getTargetTemperature()))),
@@ -292,8 +302,8 @@ public class HeatingControllerService {
                         new InfluxDBConnector.KeyValue("failed_attempts", String.valueOf(failedAttempts))
                 )
         );
+        return null;
 
-        return new Tuple<>(temperature, heaterStatus);
     }
 
     public enum Mode {
