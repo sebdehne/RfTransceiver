@@ -145,7 +145,7 @@ public class HeatingControllerService {
         logger.debug("got - " + rfPacket);
 
         // report measurements to influxDb, including operationMode and targetTemp
-        Tuple<Integer, Boolean> tuple = reportValues(rfPacket, currentMode);
+        Tuple<Integer, Boolean> tuple = reportValues(rfPacket, currentMode, failedAttempts.get());
         if (tuple == null) {
             return false;
         }
@@ -263,7 +263,7 @@ public class HeatingControllerService {
         return true;
     }
 
-    private Tuple<Integer, Boolean> reportValues(SerialConnection.RfPacket p, Mode currentMode) {
+    private Tuple<Integer, Boolean> reportValues(SerialConnection.RfPacket p, Mode currentMode, int failedAttempts) {
         int temperature = Sht15SensorService.getTemperature(p);
         String temp = MathTools.divideBy100(temperature);
         String humidity = MathTools.divideBy100(Sht15SensorService.getRelativeHumidity(p, temperature));
@@ -288,7 +288,8 @@ public class HeatingControllerService {
                         new InfluxDBConnector.KeyValue("automatic_mode", String.valueOf(currentMode == Mode.AUTOMATIC ? 1 : 0)),
                         new InfluxDBConnector.KeyValue("manual_mode", String.valueOf(currentMode == Mode.MANUAL ? 1 : 0)),
                         new InfluxDBConnector.KeyValue("target_temperature", String.valueOf(MathTools.divideBy100(getTargetTemperature()))),
-                        new InfluxDBConnector.KeyValue("configured_heater_target", String.valueOf(getConfiguredHeaterTarget().equals("on") ? 1 : 0))
+                        new InfluxDBConnector.KeyValue("configured_heater_target", String.valueOf(getConfiguredHeaterTarget().equals("on") ? 1 : 0)),
+                        new InfluxDBConnector.KeyValue("failed_attempts", String.valueOf(failedAttempts))
                 )
         );
 
