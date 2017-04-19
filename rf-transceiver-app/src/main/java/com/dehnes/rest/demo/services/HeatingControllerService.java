@@ -12,6 +12,7 @@ import javax.annotation.PreDestroy;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings("WeakerAccess")
 public class HeatingControllerService {
@@ -29,6 +30,8 @@ public class HeatingControllerService {
 
     private static final int senderId = 27;
     private static final int maxRetries = 10;
+
+    private final AtomicInteger failedAttempts = new AtomicInteger();
 
     private long lastSwitchedTimestamp = 0;
 
@@ -222,6 +225,10 @@ public class HeatingControllerService {
     }
 
     private SerialConnection.RfPacket sendWithRetries(int command) {
+        if (failedAttempts.get() > 10) {
+            logger.warn("Overriding command " + command + " with OFF because of too many failed attempts " + failedAttempts.get());
+            command = COMMAND_SWITCH_OFF_HEATER;
+        }
         received.clear();
         int retryCounter = 0;
         while (retryCounter < maxRetries) {
@@ -234,6 +241,7 @@ public class HeatingControllerService {
             }
 
             if (packet != null) {
+                failedAttempts.set(0);
                 return packet;
             }
 
@@ -241,6 +249,7 @@ public class HeatingControllerService {
 
         }
         logger.warn("Giving up sending command " + command + " to heater controller");
+        failedAttempts.incrementAndGet();
         return null;
     }
 
