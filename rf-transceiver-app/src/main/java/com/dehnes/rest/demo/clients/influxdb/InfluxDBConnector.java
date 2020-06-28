@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -22,20 +23,27 @@ public class InfluxDBConnector {
     private static final String dbName = "sensor_data";
     private static final String baseUrl = "http://" + System.getProperty("DST_HOST", "localhost") + ":8086";
 
+    private volatile boolean dbCreated = false;
+
 
     public InfluxDBConnector() {
         createDb();
     }
 
     private void createDb() {
+        if (dbCreated) {
+            return;
+        }
+        logger.info("About  to (re-)create DB in influxDb");
         String createDbQuery = "CREATE DATABASE " + dbName;
         String retentionPolicy = "alter RETENTION POLICY default ON sensor_data DURATION 260w"; // 5 years
         //
         try {
-            Request.Get(baseUrl + "/query?q=" + URLEncoder.encode(createDbQuery, "UTF-8")).execute();
-            Request.Get(baseUrl + "/query?q=" + URLEncoder.encode(retentionPolicy, "UTF-8")).execute();
+            Request.Get(baseUrl + "/query?q=" + URLEncoder.encode(createDbQuery, StandardCharsets.UTF_8)).execute();
+            Request.Get(baseUrl + "/query?q=" + URLEncoder.encode(retentionPolicy, StandardCharsets.UTF_8)).execute();
+            dbCreated = true;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            logger.warn("", e);
         }
     }
 

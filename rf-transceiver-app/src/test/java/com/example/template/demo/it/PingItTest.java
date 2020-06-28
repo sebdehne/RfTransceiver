@@ -1,14 +1,12 @@
 package com.example.template.demo.it;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import java.io.IOException;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import com.example.template.demo.category.IntegrationTest;
-
-@Category(IntegrationTest.class)
+@Disabled
 public class PingItTest {
 
     private static String url = "http://"
@@ -20,16 +18,16 @@ public class PingItTest {
     @Test
     public void testPing() throws IOException {
         restClient.executeGet("/ping", "$.response", (code, response) -> {
-            Assert.assertEquals(200, code.intValue());
-            Assert.assertEquals("PONG", response);
+            Assertions.assertEquals(200, code.intValue());
+            Assertions.assertEquals("PONG", response);
         });
     }
 
     @Test
     public void testNotFound() throws IOException {
         restClient.executeGet("/not_there", "$.response", (code, response) -> {
-            Assert.assertEquals(404, code.intValue());
-            Assert.assertTrue(response.startsWith("No handler found for "));
+            Assertions.assertEquals(404, code.intValue());
+            Assertions.assertTrue(response.startsWith("No handler found for "));
         });
     }
 }

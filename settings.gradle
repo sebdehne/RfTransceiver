@@ -1,3 +1,0 @@
-include "simple-jetty-server"
-include "rf-transceiver-app"
-

@@ -1,16 +1,9 @@
-build/
-.gradle/
 .idea/
+target/
 
 # IntelliJ
 *.ipr
 *.iws
-
-# eclipse
-bin/
-.project
-.classpath
-.settings/
 
 logs/
 

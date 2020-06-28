@@ -50,8 +50,7 @@ public class RouteBuilder {
     }
 
     public RouteBuilder add(String regex, HttpMethod method, TriConsumer<Request, Response, List<String>> h) {
-        List<Route> l = new LinkedList<>();
-        l.addAll(routes);
+        List<Route> l = new LinkedList<>(routes);
         l.add(new Route(prefix + regex, method, h));
         return new RouteBuilder(Collections.unmodifiableList(l), prefix);
     }
