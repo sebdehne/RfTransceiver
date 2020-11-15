@@ -68,17 +68,17 @@ angular.module('project.services', [])
     .factory('GarageService', function ($http, HttpWrapper) {
         return {
             getStatus: function (fn) {
-                HttpWrapper.handleResult($http.get('/api/garage_door'), 'Could not fetch the garage status', fn);
+                HttpWrapper.handleResult($http.get('/smarthome/api/garage_door'), 'Could not fetch the garage status', fn);
             },
             sendClose: function (fn) {
                 HttpWrapper.handleResult(
-                    $http.post('/api/garage_door/action?command=close'),
+                    $http.post('/smarthome/api/garage_door/action?command=close'),
                     'Could not send close command',
                     fn);
             },
             sendOpen: function (fn) {
                 HttpWrapper.handleResult(
-                    $http.post('/api/garage_door/action?command=open'),
+                    $http.post('/smarthome/api/garage_door/action?command=open'),
                     'Could not send open command',
                     fn);
             }
@@ -88,11 +88,11 @@ angular.module('project.services', [])
     .factory('HeaterService', function ($http, HttpWrapper) {
         return {
             getStatus: function (fn) {
-                HttpWrapper.handleResult($http.get('/api/heater'), 'Could not fetch the ventilation status', fn);
+                HttpWrapper.handleResult($http.get('/smarthome/api/heater'), 'Could not fetch the ventilation status', fn);
             },
             postAction: function (action, value, fn) {
                 HttpWrapper.handleResult(
-                    $http.post('/api/heater/action', {action: action, value: value}),
+                    $http.post('/smarthome/api/heater/action', {action: action, value: value}),
                     'Could not send ',
                     fn);
             }
