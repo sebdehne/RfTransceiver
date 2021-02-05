@@ -35,6 +35,7 @@ public class HeatingControllerService {
 
     private long lastSwitchedTimestamp = 0;
 
+    private final TibberService tibberService;
     private final PersistenceService persistenceService;
     private final ScheduledExecutorService timer;
     private final CommandSender commandSender;
@@ -48,8 +49,10 @@ public class HeatingControllerService {
             PersistenceService persistenceService,
             CommandSender commandSender,
             SerialConnection serialConnection,
-            InfluxDBConnector influxDBConnector) {
+            InfluxDBConnector influxDBConnector,
+            TibberService tibberService) {
 
+        this.tibberService = tibberService;
         this.persistenceService = persistenceService;
         this.commandSender = commandSender;
         this.serialConnection = serialConnection;
@@ -148,16 +151,19 @@ public class HeatingControllerService {
 
         if (currentMode == Mode.AUTOMATIC || currentMode == Mode.MANUAL) {
             if ((lastSwitchedTimestamp + holdOffInMillis) >= System.currentTimeMillis()) {
-                logger.debug("Waiting for holdOff periode");
+                logger.info("Waiting for holdOff periode");
             } else {
                 int targetTemperature = getTargetTemperature();
-                logger.debug("Evaluating target temperature now - " + targetTemperature);
-                if (tuple.a < targetTemperature) {
-                    logger.debug("Setting heater to on");
+                logger.info("Evaluating target temperature now - " + targetTemperature);
+
+                boolean canHeatNow = tibberService.canSwitchOn(24 - 7);
+
+                if (canHeatNow && tuple.a < targetTemperature) {
+                    logger.info("Setting heater to on");
                     persistenceService.set(HEATER_STATUS_KEY, "on");
                     lastSwitchedTimestamp = System.currentTimeMillis();
                 } else {
-                    logger.debug("Setting heater to off");
+                    logger.info("Setting heater to off. canHeatNow={}", canHeatNow);
                     persistenceService.set(HEATER_STATUS_KEY, "off");
                     lastSwitchedTimestamp = System.currentTimeMillis();
                 }

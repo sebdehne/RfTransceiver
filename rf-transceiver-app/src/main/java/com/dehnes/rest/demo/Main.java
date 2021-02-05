@@ -5,6 +5,8 @@ import com.dehnes.rest.server.EmbeddedJetty;
 import com.dehnes.rest.server.config.AppContext;
 import org.eclipse.jetty.server.Server;
 
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -17,6 +19,7 @@ public class Main {
 
         AppContext config = new AppContext();
         config.addInstance(ExecutorService.class, Executors.newCachedThreadPool());
+        config.addInstance(Clock.class, Clock.system(ZoneId.systemDefault()));
 
         Server server = new EmbeddedJetty().start(
                 PORT,
