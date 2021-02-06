@@ -2,6 +2,8 @@ package com.dehnes.rest.demo.services;
 
 
 import com.dehnes.rest.demo.clients.tibber.TibberPriceClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -12,6 +14,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class TibberService {
+    private static final Logger logger = LoggerFactory.getLogger(TibberService.class);
+
     private final Clock clock;
     private final TibberPriceClient tibberPriceClient;
     private final long tibberBackOffInMs = 60 * 60 * 1000;
@@ -23,7 +27,7 @@ public class TibberService {
         this.clock = clock;
     }
 
-    public synchronized boolean canSwitchOn(int numberOfHoursRequired) {
+    public synchronized boolean isEnergyPriceOK(int numberOfHoursRequired) {
         if ((lastReload + tibberBackOffInMs) < System.currentTimeMillis()) {
             reloadCacheNow();
         }
@@ -44,10 +48,14 @@ public class TibberService {
     }
 
     private void reloadCacheNow() {
+        logger.info("Fetching tibber prices...");
         List<TibberPriceClient.Price> prices = tibberPriceClient.getPrices();
         lastReload = System.currentTimeMillis();
         if (prices != null) {
             priceCache = prices;
+            logger.info("Fetching tibber prices...SUCCESS");
+        } else {
+            logger.info("Fetching tibber prices...FAILED");
         }
     }
 

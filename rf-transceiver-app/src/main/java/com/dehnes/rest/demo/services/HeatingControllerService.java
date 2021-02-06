@@ -156,14 +156,14 @@ public class HeatingControllerService {
                 int targetTemperature = getTargetTemperature();
                 logger.info("Evaluating target temperature now - " + targetTemperature);
 
-                boolean canHeatNow = tibberService.canSwitchOn(24 - 7);
+                boolean energyPriceOK = tibberService.isEnergyPriceOK(24 - 7);
 
-                if (canHeatNow && tuple.a < targetTemperature) {
+                if (energyPriceOK && tuple.a < targetTemperature) {
                     logger.info("Setting heater to on");
                     persistenceService.set(HEATER_STATUS_KEY, "on");
                     lastSwitchedTimestamp = System.currentTimeMillis();
                 } else {
-                    logger.info("Setting heater to off. canHeatNow={}", canHeatNow);
+                    logger.info("Setting heater to off. energyPriceOK={}", energyPriceOK);
                     persistenceService.set(HEATER_STATUS_KEY, "off");
                     lastSwitchedTimestamp = System.currentTimeMillis();
                 }
